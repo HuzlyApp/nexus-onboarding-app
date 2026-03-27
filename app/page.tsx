@@ -1,65 +1,59 @@
-import Image from "next/image";
+// app/page.tsx   (or app/(landing)/page.tsx)
+"use client"
+
+import { useRouter } from "next/navigation"
+import Image from "next/image"
 
 export default function Home() {
+  const router = useRouter()
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-gradient-to-br from-teal-600 to-emerald-600 flex items-center justify-center p-4 md:p-8">
+      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full max-w-5xl">
+        {/* LEFT - Text & Button */}
+        <div className="w-full md:w-1/2 p-10 md:p-16 flex flex-col justify-center">
+          <h1 className="text-4xl md:text-4xl font-bold text-gray-800 mb-4">
+            Join Nexus MedPro
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p className="text-lg md:text-xl text-gray-600 mb-10">
+            Quick pay, flexible shifts, support team
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+          <button
+            onClick={() => router.push("/application/step-1-upload")}
+            className="bg-teal-600 hover:bg-teal-700 text-white text-lg font-medium px-10 py-4 rounded-xl transition shadow-md focus:outline-none focus:ring-4 focus:ring-teal-300 w-full md:w-auto"
           >
+            Start Application
+          </button>
+        </div>
+
+        {/* RIGHT - Image with overlay & logo */}
+        <div className="relative w-full md:w-1/2 h-80 md:h-auto">
+          <Image
+            src="/images/nurse.jpg"
+            alt="Nurse"
+            fill
+            className="object-cover grayscale"
+            priority
+          />
+
+          {/* Semi-transparent white overlay */}
+          <div className="absolute inset-0 bg-white/70" />
+
+          {/* Centered Nexus logo */}
+          <div className="absolute inset-0 flex items-center justify-center">
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              src="/images/nexus-logo.png"
+              alt="Nexus MedPro Logo"
+              width={220}
+              height={80}
+              className="w-48 md:w-56 h-auto"
+              priority
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
-  );
+  )
 }
