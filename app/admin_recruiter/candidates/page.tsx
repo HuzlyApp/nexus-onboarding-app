@@ -2,212 +2,203 @@
 
 import { useState } from "react"
 
-const data = Array.from({ length: 9 }).map((_, i) => ({
-  id: i,
-  name: ["James Doe", "Clark Johnson", "Joe Dalton"][i % 3],
-  email: "jamesdoe@gmail.com",
-  phone: "+1 400 180 9141",
-  location: "Boston, MA",
-  status: "New",
-}))
+type Item = {
+  label: string
+  status: "pending" | "completed" | "rejected"
+}
 
-export default function CandidatesPage() {
+type Section = {
+  title: string
+  items: Item[]
+}
 
-  const [view, setView] = useState<"card" | "list">("card")
+export default function ChecklistPage() {
+
+  const [sections] = useState<Section[]>([
+    {
+      title: "Claims & Assigned Facilities",
+      items: [
+        { label: "Facility Assigned", status: "pending" },
+        { label: "Assigned Rate", status: "pending" },
+        { label: "Verified Documents", status: "completed" },
+        { label: "TB Test", status: "completed" },
+        { label: "CPR Certifications", status: "pending" },
+      ],
+    },
+    {
+      title: "Initial Screening / Interview",
+      items: [
+        { label: "Call 1", status: "completed" },
+        { label: "Call 2", status: "rejected" },
+      ],
+    },
+    {
+      title: "Pre-employment Compliance Screening",
+      items: [
+        { label: "ID Verification", status: "pending" },
+        { label: "Background Check", status: "pending" },
+        { label: "Drug Test", status: "pending" },
+      ],
+    },
+    {
+      title: "Facility Specific Requirements",
+      items: [
+        { label: "Facility Approval", status: "pending" },
+        { label: "Score Statement", status: "pending" },
+      ],
+    },
+    {
+      title: "New Hire Agreement",
+      items: [
+        { label: "Employee Agreement", status: "completed" },
+        { label: "Create Work Record", status: "completed" },
+        { label: "When/Work Account", status: "pending" },
+        { label: "Paychex Account", status: "pending" },
+      ],
+    },
+    {
+      title: "Final Onboarding Steps",
+      items: [
+        { label: "Welcome Email Sent", status: "pending" },
+        { label: "Badge Sent", status: "pending" },
+        { label: "Job Offer", status: "pending" },
+        { label: "Final Onboarding Call", status: "pending" },
+      ],
+    },
+  ])
 
   return (
-    <div className="flex h-screen bg-[#F7F9FB]">
+    <div className="flex min-h-screen bg-[#F5F5F5]">
 
       {/* SIDEBAR */}
-      <div className="w-[240px] bg-[#0F3D3E] text-white flex flex-col">
-
-        <div className="p-6 border-b border-white/10">
-          <div className="text-lg font-bold">NEXUS</div>
-        </div>
-
-        <div className="p-4 text-xs text-white/60">TEAM MANAGEMENT</div>
-
-        <div className="px-3 space-y-2">
-
-          <SidebarItem active label="Candidates" />
-          <SidebarSub label="New" active />
-          <SidebarSub label="Pending" />
-          <SidebarSub label="Approved" />
-          <SidebarSub label="Disapproved" />
-
-          <div className="mt-6" />
-
-          <SidebarItem label="Workers" />
-          <SidebarSub label="Active" />
-          <SidebarSub label="Inactive" />
-          <SidebarSub label="Cancelled" />
-          <SidebarSub label="Banned" />
-
-        </div>
-
+      <div className="w-[80px] bg-[#0B3D3B] flex flex-col items-center py-6 gap-6">
+        <div className="w-10 h-10 bg-white rounded-full" />
+        <div className="w-8 h-8 bg-white/20 rounded" />
+        <div className="w-8 h-8 bg-white/20 rounded" />
+        <div className="mt-auto w-8 h-8 bg-white/20 rounded" />
       </div>
 
       {/* MAIN */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 p-6">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center px-8 py-4 bg-white border-b">
-
-          <div className="flex items-center gap-4">
-            <button className="border rounded px-2 py-1">←</button>
+        <div className="bg-white rounded-xl p-4 flex justify-between items-center mb-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-teal-500 text-white flex items-center justify-center">
+              J
+            </div>
             <div>
-              <h1 className="text-xl font-semibold">Candidates</h1>
-              <p className="text-sm text-gray-500">
-                Manage applicants in one place
+              <p className="font-semibold text-black">John Doe</p>
+              <p className="text-xs text-gray-500">
+                Licensed Practical Nurse, LPN
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <button className="border px-3 py-1 rounded text-sm">
+            New Applicant
+          </button>
+        </div>
 
-            <input
-              placeholder="Search worker or candidate"
-              className="border px-4 py-2 rounded-md text-sm w-64"
-            />
+        {/* TABS */}
+        <div className="bg-white rounded-xl p-4 mb-6 shadow-sm flex gap-6 text-sm">
+          <span className="text-gray-400">Checklist</span>
+          <span className="text-gray-400">Profile</span>
+          <span className="text-gray-400">Attachments</span>
+          <span className="text-gray-400">Skill Assessments</span>
+          <span className="text-gray-400">Authorization</span>
+          <span className="text-gray-400">Activities</span>
+          <span className="text-gray-400">Facility Assignments</span>
+          <span className="text-gray-400">History</span>
+        </div>
 
-            <button className="border px-3 py-2 rounded-md text-sm">
-              Filters
-            </button>
+        {/* PROGRESS */}
+        <div className="bg-white rounded-xl p-4 mb-6 shadow-sm">
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-black font-medium">
+              Progress Checklist Tracker
+            </span>
+            <span className="text-gray-500">15%</span>
+          </div>
 
-            <button className="border px-3 py-2 rounded-md text-sm">
-              Refresh
-            </button>
+          <div className="w-full h-2 bg-gray-200 rounded-full">
+            <div className="h-2 bg-teal-500 rounded-full w-[15%]" />
+          </div>
+        </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              Card View
-              <input
-                type="checkbox"
-                checked={view === "list"}
-                onChange={() => setView(view === "card" ? "list" : "card")}
-              />
-              List View
+        {/* GRID */}
+        <div className="grid grid-cols-2 gap-6">
+
+          {sections.map((section, idx) => (
+
+            <div
+              key={idx}
+              className="bg-white rounded-xl p-5 shadow-sm"
+            >
+
+              <div className="flex justify-between mb-4">
+                <h3 className="font-semibold text-black text-sm">
+                  {section.title}
+                </h3>
+
+                <button className="text-xs border px-2 py-1 rounded">
+                  Details
+                </button>
+              </div>
+
+              <div className="space-y-3">
+
+                {section.items.map((item, i) => (
+
+                  <div
+                    key={i}
+                    className="flex justify-between text-sm"
+                  >
+                    <span className="text-black">
+                      {item.label}
+                    </span>
+
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        item.status === "completed"
+                          ? "bg-green-100 text-green-600"
+                          : item.status === "rejected"
+                          ? "bg-red-100 text-red-600"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+
+                ))}
+
+              </div>
+
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-300 rounded-full" />
-              <span className="text-sm font-medium">Sean Smith</span>
-            </div>
+          ))}
+
+        </div>
+
+        {/* HISTORY */}
+        <div className="bg-white rounded-xl p-5 mt-6 shadow-sm">
+
+          <h3 className="font-semibold text-black mb-4 text-sm">
+            Recent History
+          </h3>
+
+          <div className="space-y-3 text-sm text-gray-600">
+
+            <p>• New Note Added</p>
+            <p>• Document Uploaded</p>
+            <p>• Status Updated</p>
 
           </div>
 
         </div>
 
-        {/* FILTER BAR */}
-        <div className="px-8 py-4 flex gap-4 bg-white border-b">
-
-          <Select label="Type" />
-          <Select label="Status" />
-          <Select label="Job Role" />
-          <Select label="Location" />
-
-        </div>
-
-        {/* CONTENT */}
-        <div className="p-8 overflow-auto">
-
-          {view === "card" ? (
-            <div className="grid grid-cols-3 gap-6">
-
-              {data.map((c) => (
-                <CandidateCard key={c.id} c={c} />
-              ))}
-
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border">
-
-              {data.map((c) => (
-                <CandidateRow key={c.id} c={c} />
-              ))}
-
-            </div>
-          )}
-
-        </div>
-
       </div>
-
-    </div>
-  )
-}
-
-function SidebarItem({ label, active = false }: any) {
-  return (
-    <div className={`p-3 rounded-lg cursor-pointer ${active ? "bg-white/20" : "hover:bg-white/10"}`}>
-      {label}
-    </div>
-  )
-}
-
-function SidebarSub({ label, active = false }: any) {
-  return (
-    <div className={`ml-4 p-2 rounded cursor-pointer text-sm ${active ? "bg-white text-black" : "hover:bg-white/10"}`}>
-      {label}
-    </div>
-  )
-}
-
-function Select({ label }: any) {
-  return (
-    <select className="border px-3 py-2 rounded-md text-sm">
-      <option>{label}</option>
-    </select>
-  )
-}
-
-function CandidateCard({ c }: any) {
-  return (
-    <div className="bg-white border rounded-xl p-5 shadow-sm">
-
-      <div className="flex justify-between items-start">
-
-        <div className="flex gap-3">
-
-          <div className="w-10 h-10 bg-teal-600 text-white rounded-full flex items-center justify-center">
-            {c.name.charAt(0)}
-          </div>
-
-          <div>
-            <div className="font-medium">{c.name}</div>
-            <div className="text-xs text-gray-400">RN #12345</div>
-          </div>
-
-        </div>
-
-        <span className="text-xs bg-teal-100 text-teal-600 px-2 py-1 rounded">
-          {c.status}
-        </span>
-
-      </div>
-
-      <div className="mt-4 text-sm text-gray-600 space-y-1">
-        <div>📧 {c.email}</div>
-        <div>📞 {c.phone}</div>
-        <div>📍 {c.location}</div>
-      </div>
-
-    </div>
-  )
-}
-
-function CandidateRow({ c }: any) {
-  return (
-    <div className="flex justify-between items-center p-4 border-b">
-
-      <div>
-        <div className="font-medium">{c.name}</div>
-        <div className="text-sm text-gray-500">{c.email}</div>
-      </div>
-
-      <div>{c.location}</div>
-
-      <div className="text-teal-600">{c.status}</div>
-
     </div>
   )
 }
