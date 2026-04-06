@@ -1,4 +1,7 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+"use client";
+
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | undefined;
 
@@ -11,13 +14,16 @@ function getClient(): SupabaseClient {
         "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
       );
     }
-    client = createClient(url, key);
+    client = createBrowserClient(url, key);
   }
   return client;
 }
 
-/** Lazily created so `next build` can load modules without Supabase env vars. */
-export const supabase = new Proxy({} as SupabaseClient, {
+/**
+ * Lazy browser client so modules can load during `next build` without Supabase env.
+ * Real calls happen in effects/handlers after hydration.
+ */
+export const supabaseBrowser = new Proxy({} as SupabaseClient, {
   get(_target, prop, receiver) {
     const c = getClient();
     const value = Reflect.get(c, prop, receiver);

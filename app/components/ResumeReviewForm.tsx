@@ -3,8 +3,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ResumeData as ParsedResumeData } from "@/lib/resumeSchema";
 
-interface ResumeData {
+export interface FormResumeData {
   full_name?: string;
   first_name?: string;
   last_name?: string;
@@ -18,43 +19,82 @@ interface ResumeData {
   job_role?: string;
 }
 
+function isParsedResume(
+  data: ParsedResumeData | FormResumeData
+): data is ParsedResumeData {
+  return (
+    "firstName" in data ||
+    "fullName" in data ||
+    "zipCode" in data ||
+    "jobRole" in data
+  );
+}
+
+function toFormResumeData(
+  raw: ParsedResumeData | FormResumeData | null | undefined
+): FormResumeData {
+  if (!raw) return {};
+
+  if (isParsedResume(raw)) {
+    let first_name = raw.firstName ?? "";
+    let last_name = raw.lastName ?? "";
+    const fullName = raw.fullName ?? undefined;
+    if (fullName && !first_name.trim() && !last_name.trim()) {
+      const parts = fullName.trim().split(/\s+/);
+      first_name = parts[0] || "";
+      last_name = parts.slice(1).join(" ") || "";
+    }
+    return {
+      first_name,
+      last_name,
+      full_name: fullName,
+      address1: raw.address ?? "",
+      address2: raw.address2 ?? "",
+      city: raw.city ?? "",
+      state: raw.state ?? "",
+      zip_code: raw.zipCode ?? "",
+      phone: raw.phone ?? "",
+      email: raw.email ?? "",
+      job_role: raw.jobRole ?? "",
+    };
+  }
+
+  const data = raw;
+  let first_name = data.first_name || "";
+  let last_name = data.last_name || "";
+
+  if (data.full_name && !first_name.trim() && !last_name.trim()) {
+    const parts = data.full_name.trim().split(/\s+/);
+    first_name = parts[0] || "";
+    last_name = parts.slice(1).join(" ") || "";
+  }
+
+  return {
+    first_name,
+    last_name,
+    address1: data.address1 || "",
+    address2: data.address2 || "",
+    city: data.city || "",
+    state: data.state || "",
+    zip_code: data.zip_code || "",
+    phone: data.phone || "",
+    email: data.email || "",
+    job_role: data.job_role || "",
+    ...data,
+  };
+}
+
 interface Props {
-  initialData?: ResumeData | null;      // ← made optional + null allowed
-  onSave?: (updatedData: ResumeData) => void;
+  initialData?: ParsedResumeData | FormResumeData | null;
+  onSave?: (updatedData: FormResumeData) => void;
 }
 
 export default function ResumeReviewForm({ initialData = {}, onSave }: Props) {
   const router = useRouter();
 
-  // Name splitting moved to initializer — no useEffect needed
-  const [formData, setFormData] = useState<ResumeData>(() => {
-    // Safe fallback if initialData is undefined/null
-    const data = initialData || {};
-
-    let first_name = data.first_name || "";
-    let last_name = data.last_name || "";
-
-    // Only split if full_name exists and names are missing
-    if (data.full_name && !first_name.trim() && !last_name.trim()) {
-      const parts = data.full_name.trim().split(/\s+/);
-      first_name = parts[0] || "";
-      last_name = parts.slice(1).join(" ") || "";
-    }
-
-    return {
-      first_name,
-      last_name,
-      address1: data.address1 || "",
-      address2: data.address2 || "",
-      city: data.city || "",
-      state: data.state || "",
-      zip_code: data.zip_code || "",
-      phone: data.phone || "",
-      email: data.email || "",
-      job_role: data.job_role || "",
-      ...data, // keep any extra fields
-    };
-  });
+  const [formData, setFormData] = useState<FormResumeData>(() =>
+    toFormResumeData(initialData)
+  );
 
   const [sameAddress, setSameAddress] = useState(true);
 
@@ -76,9 +116,7 @@ export default function ResumeReviewForm({ initialData = {}, onSave }: Props) {
         `${formData.first_name || ""} ${formData.last_name || ""}`.trim(),
     };
 
-    if (onSave) {
-      onSave(dataToSave);
-    }
+    onSave?.(dataToSave);
 
     router.push("/onboarding/skill-assessment");
   };

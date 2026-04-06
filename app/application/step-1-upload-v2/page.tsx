@@ -2,10 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import * as pdfjsLib from "pdfjs-dist"
-
-// Important: Set worker source (use CDN or host locally in production)
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
 
 interface ParsedResume {
   first_name?: string
@@ -42,6 +38,9 @@ export default function Step1Upload() {
     setError(null)
 
     try {
+      const pdfjsLib = await import("pdfjs-dist")
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+
       const arrayBuffer = await file.arrayBuffer()
 
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
@@ -52,9 +51,8 @@ export default function Step1Upload() {
         const page = await pdf.getPage(i)
         const content = await page.getTextContent()
 
-        // Correct & typed access to text content
         const pageText = content.items
-          .map((item) => (item as pdfjsLib.TextItem).str)
+          .map((item) => ("str" in item ? item.str : ""))
           .join(" ")
 
         fullText += pageText + "\n"

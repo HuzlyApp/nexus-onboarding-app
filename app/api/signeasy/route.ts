@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-process.env.SUPABASE_URL!,
-process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+export async function POST(req: Request) {
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 })
+  }
 
-export async function POST(req: Request){
+  const supabase = createClient(url, key)
 
 const { workerId,email } = await req.json()
 

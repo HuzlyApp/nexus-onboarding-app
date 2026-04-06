@@ -1,5 +1,6 @@
 // lib/resumeSchema.ts
 import { z } from "zod";
+import type { ZodTypeAny } from "zod/v3";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 // ────────────────────────────────────────────────
@@ -57,7 +58,8 @@ export type ResumeData = z.infer<typeof ResumeSchema>;
 // ────────────────────────────────────────────────
 // Convert Zod schema → JSON Schema for Grok/OpenAI structured output
 // ────────────────────────────────────────────────
-export const resumeJsonSchema = zodToJsonSchema(ResumeSchema, {
+// zod-to-json-schema types target zod/v3; Zod 4 schemas work at runtime.
+export const resumeJsonSchema = zodToJsonSchema(ResumeSchema as unknown as ZodTypeAny, {
   target: "openApi3",          // best compatibility
   $refStrategy: "none",        // avoid $ref to keep it simple & flat
   definitionPath: "#/definitions", // optional, but clean

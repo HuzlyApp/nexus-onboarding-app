@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ResumeReviewForm from "@/components/onboarding/ResumeReviewForm";
+import ResumeReviewForm from "@/app/components/ResumeReviewForm";
+import { ResumeSchema, type ResumeData } from "@/lib/resumeSchema";
 
 export default function Step1ReviewPage() {
   const [data, setData] = useState<ResumeData | null>(null);
@@ -10,7 +11,7 @@ export default function Step1ReviewPage() {
     // Replace with your real data source
     const load = async () => {
       // const result = await fetch... or from localStorage
-      setData({}); // fallback
+      setData(ResumeSchema.parse({}));
     };
     load();
   }, []);
