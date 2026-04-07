@@ -1,11 +1,18 @@
 "use client"
 
 import mapboxgl from "mapbox-gl"
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import * as turf from "@turf/turf"
 
 // ✅ MAPBOX TOKEN
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+if (!token) {
+  // Avoid crashing `next build` when env vars are not present.
+  // Map will error client-side if token truly missing at runtime.
+  console.warn("Missing NEXT_PUBLIC_MAPBOX_TOKEN")
+} else {
+  mapboxgl.accessToken = token
+}
 
 // ==============================
 // ✅ TYPES
@@ -23,6 +30,9 @@ type Props = {
   center: [number, number]
   workers: Worker[]
   radius: number // miles
+  onCenterChange?: (center: [number, number]) => void
+  interactive?: boolean
+  onMapError?: (message: string) => void
 }
 
 // ==============================
@@ -32,11 +42,43 @@ export default function MapBoxAdvanced({
   center,
   workers,
   radius,
+  onCenterChange,
+  interactive = true,
+  onMapError,
 }: Props) {
   const mapRef = useRef<HTMLDivElement | null>(null)
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null)
+  const markerRef = useRef<mapboxgl.Marker | null>(null)
+
+  const circleGeojson = useMemo(() => {
+    return turf.circle(center, radius, { steps: 64, units: "miles" })
+  }, [center, radius])
+
+  const workersGeojson = useMemo<GeoJSON.FeatureCollection>(() => {
+    return {
+      type: "FeatureCollection",
+      features: workers.map((w) => ({
+        type: "Feature",
+        properties: {
+          id: w.id,
+          name: `${w.first_name} ${w.last_name}`,
+          role: w.job_role,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [w.lng, w.lat],
+        },
+      })),
+    }
+  }, [workers])
 
   useEffect(() => {
     if (!mapRef.current) return
+    if (mapInstanceRef.current) return
+
+    if (!mapboxgl.accessToken) {
+      onMapError?.("Missing Mapbox access token")
+    }
 
     const map = new mapboxgl.Map({
       container: mapRef.current,
@@ -45,18 +87,18 @@ export default function MapBoxAdvanced({
       zoom: 10,
     })
 
-    map.on("load", () => {
-      // =============================
-      // ✅ RADIUS CIRCLE
-      // =============================
-      const circle = turf.circle(center, radius, {
-        steps: 64,
-        units: "miles",
-      })
+    map.on("error", (e) => {
+      const msg =
+        (e as any)?.error?.message ||
+        (e as any)?.error?.toString?.() ||
+        "Map error"
+      onMapError?.(String(msg))
+    })
 
+    map.on("load", () => {
       map.addSource("radius", {
         type: "geojson",
-        data: circle,
+        data: circleGeojson,
       })
 
       map.addLayer({
@@ -82,28 +124,12 @@ export default function MapBoxAdvanced({
       // =============================
       // ✅ WORKERS GEOJSON
       // =============================
-      const geojson: GeoJSON.FeatureCollection = {
-        type: "FeatureCollection",
-        features: workers.map((w) => ({
-          type: "Feature",
-          properties: {
-            id: w.id,
-            name: `${w.first_name} ${w.last_name}`,
-            role: w.job_role,
-          },
-          geometry: {
-            type: "Point",
-            coordinates: [w.lng, w.lat],
-          },
-        })),
-      }
-
       // =============================
       // ✅ SOURCE WITH CLUSTER
       // =============================
       map.addSource("workers", {
         type: "geojson",
-        data: geojson,
+        data: workersGeojson,
         cluster: true,
         clusterMaxZoom: 14,
         clusterRadius: 50,
@@ -226,8 +252,49 @@ export default function MapBoxAdvanced({
       })
     })
 
-    return () => map.remove()
-  }, [center, workers, radius])
+    // Center marker
+    const marker = new mapboxgl.Marker({ draggable: interactive })
+      .setLngLat(center)
+      .addTo(map)
+
+    if (interactive) {
+      marker.on("dragend", () => {
+        const ll = marker.getLngLat()
+        onCenterChange?.([ll.lng, ll.lat])
+      })
+
+      map.on("click", (e) => {
+        marker.setLngLat(e.lngLat)
+        onCenterChange?.([e.lngLat.lng, e.lngLat.lat])
+      })
+    }
+
+    markerRef.current = marker
+    mapInstanceRef.current = map
+
+    return () => {
+      marker.remove()
+      map.remove()
+      markerRef.current = null
+      mapInstanceRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Update sources + marker when props change
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    const radiusSource = map.getSource("radius") as mapboxgl.GeoJSONSource | undefined
+    radiusSource?.setData(circleGeojson as unknown as GeoJSON.Feature)
+
+    const workersSource = map.getSource("workers") as mapboxgl.GeoJSONSource | undefined
+    workersSource?.setData(workersGeojson as unknown as GeoJSON.FeatureCollection)
+
+    markerRef.current?.setLngLat(center)
+    map.easeTo({ center })
+  }, [center, circleGeojson, workersGeojson])
 
   return <div ref={mapRef} className="w-full h-full rounded-xl" />
 }

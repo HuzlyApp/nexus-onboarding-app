@@ -1,127 +1,59 @@
-// app/api/parse-resume/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import pdfParse from "pdf-parse";
-import OpenAI from "openai";
-import { ResumeSchema, resumeJsonSchema } from "@/lib/resumeSchema";
+import { NextResponse } from "next/server"
 
-// ────────────────────────────────────────────────
-// Grok client
-// ────────────────────────────────────────────────
-const grok = new OpenAI({
-  apiKey: process.env.XAI_API_KEY ?? process.env.GROK_API_KEY,
-  baseURL: "https://api.x.ai/v1",
-});
+export async function POST(req: Request) {
+  const { text } = await req.json()
 
-// ────────────────────────────────────────────────
-// POST handler
-// ────────────────────────────────────────────────
-export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("resume") as File | null;
+  const prompt = `
+Extract resume data and return ONLY JSON:
 
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json({ error: "No resume file uploaded" }, { status: 400 });
-    }
+{
+  "firstName": "",
+  "lastName": "",
+  "address1": "",
+  "address2": "",
+  "city": "",
+  "state": "",
+  "zipCode": "",
+  "phone": "",
+  "email": "",
+  "jobRole": ""
+}
 
-    if (file.size === 0) {
-      return NextResponse.json({ error: "Uploaded file is empty" }, { status: 400 });
-    }
+Rules:
+- Extract city/state from address
+- jobRole = latest job title
+- Return empty string if missing
+`
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    let resumeText = "";
-    if (file.type === "application/pdf") {
-      const pdfData = await pdfParse(buffer);
-      resumeText = pdfData.text;
-    } else {
-      return NextResponse.json(
-        { error: "Only PDF files are supported at this time" },
-        { status: 415 }
-      );
-    }
-
-    if (!resumeText.trim()) {
-      return NextResponse.json(
-        { error: "Could not extract any text from the PDF" },
-        { status: 400 }
-      );
-    }
-
-    // Call Grok with structured output
-    const completion = await grok.chat.completions.create({
-      model: "grok-beta", // or "grok-2-latest" — check docs.x.ai
+  const response = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.GROK_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "grok-beta",
+      temperature: 0,
       messages: [
-        {
-          role: "system",
-          content:
-            "You are an expert resume parser. Extract structured information accurately. " +
-            "Be conservative — if unclear or missing, use null or empty string. " +
-            "Format dates naturally (e.g. 'Mar 2023 – Present'). " +
-            "Split bullet points into arrays when possible. " +
-            "Return ONLY valid JSON — no explanations, no markdown, no code blocks.",
-        },
-        {
-          role: "user",
-          content: `Parse this resume:\n\n${resumeText.slice(0, 32000)}`,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 2500,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "resume_extraction",
-          strict: true,
-          schema: resumeJsonSchema, // ← this is now correct
-        },
-      },
-    });
+        { role: "user", content: prompt + text }
+      ]
+    })
+  })
 
-    const message = completion.choices[0]?.message;
+  const data = await response.json()
 
-    if (!message?.content) {
-      return NextResponse.json(
-        { error: "No valid response from Grok" },
-        { status: 500 }
-      );
-    }
+  const raw = data.choices?.[0]?.message?.content || ""
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(message.content);
-    } catch (jsonError) {
-      console.error("JSON parse failed:", message.content);
-      return NextResponse.json(
-        { error: "AI response was not valid JSON" },
-        { status: 500 }
-      );
-    }
+  // ✅ CLEAN JSON (VERY IMPORTANT)
+  const clean = raw.match(/\{[\s\S]*\}/)?.[0] || "{}"
 
-    const validationResult = ResumeSchema.safeParse(parsed);
+  let parsed = {}
 
-    if (!validationResult.success) {
-      console.error("Zod validation failed:", validationResult.error.format());
-      return NextResponse.json(
-        {
-          error: "Structured data did not match expected schema",
-          details: validationResult.error.format(),
-        },
-        { status: 422 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: validationResult.data,
-      rawTextExcerpt: resumeText.slice(0, 500) + (resumeText.length > 500 ? "..." : ""),
-    });
-  } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    console.error("Resume parsing failed:", err);
-    return NextResponse.json(
-      { error: err.message || "Internal server error" },
-      { status: 500 }
-    );
+  try {
+    parsed = JSON.parse(clean)
+  } catch {
+    parsed = {}
   }
+
+  return NextResponse.json(parsed)
 }
