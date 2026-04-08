@@ -78,7 +78,7 @@ export default function WorkersPage() {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from("worker_profiles")
+          .from("worker")
           .select("id, first_name, last_name, job_role, created_at, email, phone, address1, city, state")
           .order("created_at", { ascending: false })
           .returns<WorkerProfile[]>();
