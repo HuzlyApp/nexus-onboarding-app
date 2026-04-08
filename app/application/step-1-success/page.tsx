@@ -9,8 +9,18 @@ export default function Step1Success() {
   const router = useRouter()
 
   const [fileName, setFileName] = useState<string>("resume.pdf")
+  const [fileSizeBytes, setFileSizeBytes] = useState<number | null>(null)
   const [agree, setAgree] = useState<boolean>(false)
   const [mounted, setMounted] = useState<boolean>(false)
+
+  function formatBytes(bytes: number | null) {
+    if (!bytes && bytes !== 0) return "—"
+    const mb = bytes / (1024 * 1024)
+    if (mb >= 1) return `${mb.toFixed(1)} MB`
+    const kb = bytes / 1024
+    if (kb >= 1) return `${kb.toFixed(0)} KB`
+    return `${bytes} B`
+  }
 
   // ✅ Fix hydration + localStorage
   useEffect(() => {
@@ -18,6 +28,10 @@ export default function Step1Success() {
 
     const name = localStorage.getItem("resumeName")
     if (name) setFileName(name)
+
+    const sizeRaw = localStorage.getItem("resumeSizeBytes")
+    const sizeNum = sizeRaw ? Number(sizeRaw) : null
+    if (sizeNum && Number.isFinite(sizeNum)) setFileSizeBytes(sizeNum)
   }, [])
 
   // ✅ REMOVE FILE
@@ -82,9 +96,7 @@ export default function Step1Success() {
                 <p className="text-gray-800 font-medium">
                   {fileName}
                 </p>
-                <p className="text-xs text-gray-400">
-                  9.6 MB
-                </p>
+                <p className="text-xs text-gray-400">{formatBytes(fileSizeBytes)}</p>
               </div>
 
             </div>
@@ -131,7 +143,7 @@ export default function Step1Success() {
               onClick={handleContinue}
               className="bg-[#0CC8B0] text-white px-6 py-2 rounded-lg hover:bg-[#0AAE9E]"
             >
-              Continue
+              Upload
             </button>
 
           </div>

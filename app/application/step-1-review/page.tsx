@@ -4,6 +4,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import Image from "next/image"
+import OnboardingStepper from "@/app/components/OnboardingStepper"
 
 export default function Step1Review() {
   const router = useRouter()
@@ -28,6 +30,16 @@ export default function Step1Review() {
 
   // Load parsed resume data from PDF
   useEffect(() => {
+    // Ensure we always have an applicant id for saving.
+    const existingApplicantId = localStorage.getItem("applicantId")
+    if (!existingApplicantId) {
+      const newId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `app_${Date.now()}_${Math.random().toString(16).slice(2)}`
+      localStorage.setItem("applicantId", newId)
+    }
+
     const saved = localStorage.getItem("parsedResume")
     if (!saved) return
 
@@ -60,13 +72,11 @@ export default function Step1Review() {
     setLoading(true)
 
     try {
-      const applicantId = localStorage.getItem("applicantId")
-      if (!applicantId) {
-        throw new Error("No applicant ID found. Please start from the beginning.")
-      }
+      const applicantId = localStorage.getItem("applicantId") || ""
+      if (!applicantId) throw new Error("Missing applicant ID")
 
       const { error: upsertError } = await supabase
-        .from("worker_profiles")
+        .from("worker")
         .upsert({
           applicant_id: applicantId,
           first_name: form.firstName.trim(),
@@ -105,11 +115,13 @@ export default function Step1Review() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-teal-400 to-emerald-500 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden w-full max-w-[1000px] flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-gradient-to-br from-teal-600 to-emerald-600 flex items-center justify-center p-4 md:p-8">
+      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-5xl flex flex-col md:flex-row min-h-[540px]">
 
         {/* LEFT - Form */}
-        <div className="flex-1 p-8 lg:p-12">
+        <div className="w-full md:w-2/3 p-8 md:p-10">
+          <OnboardingStepper currentStep={1} />
+
           <h2 className="text-2xl font-semibold text-black mb-6">
             Review resume details
           </h2>
@@ -128,7 +140,7 @@ export default function Step1Review() {
                 <input
                   value={form.firstName}
                   onChange={(e) => handleChange("firstName", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                   placeholder="First Name"
                 />
               </div>
@@ -137,7 +149,7 @@ export default function Step1Review() {
                 <input
                   value={form.lastName}
                   onChange={(e) => handleChange("lastName", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                   placeholder="Last Name"
                 />
               </div>
@@ -149,7 +161,7 @@ export default function Step1Review() {
               <input
                 value={form.address1}
                 onChange={(e) => handleChange("address1", e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                 placeholder="1234 Main St, Apt 4B"
               />
             </div>
@@ -172,7 +184,7 @@ export default function Step1Review() {
                 value={form.address2}
                 onChange={(e) => handleChange("address2", e.target.value)}
                 disabled={form.sameAsAddress1}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black
+                className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black
                   ${form.sameAsAddress1 ? "bg-gray-100" : ""}`}
                 placeholder="Apt, Suite, Building, Floor, etc."
               />
@@ -185,7 +197,7 @@ export default function Step1Review() {
                 <input
                   value={form.city}
                   onChange={(e) => handleChange("city", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                   placeholder="City"
                 />
               </div>
@@ -194,7 +206,7 @@ export default function Step1Review() {
                 <input
                   value={form.state}
                   onChange={(e) => handleChange("state", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                   placeholder="State"
                 />
               </div>
@@ -203,7 +215,7 @@ export default function Step1Review() {
                 <input
                   value={form.zipCode}
                   onChange={(e) => handleChange("zipCode", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                   placeholder="Zip Code"
                 />
               </div>
@@ -216,7 +228,7 @@ export default function Step1Review() {
                 <input
                   value={form.phone}
                   onChange={(e) => handleChange("phone", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                   placeholder="Phone"
                 />
               </div>
@@ -225,7 +237,7 @@ export default function Step1Review() {
                 <input
                   value={form.email}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black"
                   placeholder="Email"
                 />
               </div>
@@ -237,7 +249,7 @@ export default function Step1Review() {
               <select
                 value={form.jobRole}
                 onChange={(e) => handleChange("jobRole", e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black bg-white"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-teal-600 focus:outline-none text-black bg-white"
               >
                 <option value="">Select role</option>
                 <option value="CNA">CNA</option>
@@ -253,14 +265,14 @@ export default function Step1Review() {
           <div className="flex justify-end gap-4 mt-10">
             <button
               onClick={() => router.back()}
-              className="px-8 py-3 border border-gray-400 text-black font-medium rounded-xl hover:bg-gray-50 transition"
+              className="px-8 py-3 border border-gray-300 text-black font-medium rounded-xl hover:bg-gray-50 transition"
             >
               Back
             </button>
             <button
               onClick={handleSaveAndContinue}
               disabled={loading}
-              className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="px-8 py-3 bg-teal-700 hover:bg-teal-800 text-white font-medium rounded-xl transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading ? "Saving..." : "Save & continue"}
             </button>
@@ -268,13 +280,24 @@ export default function Step1Review() {
         </div>
 
         {/* RIGHT - Branding */}
-        <div className="w-full lg:w-1/3 bg-gray-100 flex items-center justify-center p-8 lg:p-0">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-black mb-2">NEXUS</div>
-            <p className="text-sm text-gray-600">MedPro Staffing</p>
-            <p className="mt-6 text-xs text-gray-500">
-              Connecting Healthcare professionals with service providers
-            </p>
+        <div className="hidden md:block w-1/3 relative">
+          <Image src="/images/nurse.jpg" alt="nurse" fill className="object-cover grayscale" />
+          <div className="absolute inset-0 bg-white/70" />
+          <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
+            <div className="flex flex-col items-center">
+              <Image
+                src="/images/nexus-logo.png"
+                alt="Nexus MedPro Logo"
+                width={220}
+                height={80}
+                className="w-56 h-auto"
+                priority
+              />
+              <div className="mt-6 h-px w-56 bg-zinc-300" />
+              <div className="mt-4 text-xs text-zinc-700">
+                Nexus MedPro Staffing – Connecting Healthcare professionals with service providers
+              </div>
+            </div>
           </div>
         </div>
       </div>
