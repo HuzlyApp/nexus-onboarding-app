@@ -4,6 +4,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import Image from "next/image"
+import OnboardingStepper from "@/app/components/OnboardingStepper"
 
 export default function Step1Review() {
   const router = useRouter()
@@ -28,6 +30,16 @@ export default function Step1Review() {
 
   // Load parsed resume data from PDF
   useEffect(() => {
+    // Ensure we always have an applicant id for saving.
+    const existingApplicantId = localStorage.getItem("applicantId")
+    if (!existingApplicantId) {
+      const newId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `app_${Date.now()}_${Math.random().toString(16).slice(2)}`
+      localStorage.setItem("applicantId", newId)
+    }
+
     const saved = localStorage.getItem("parsedResume")
     if (!saved) return
 
@@ -60,13 +72,11 @@ export default function Step1Review() {
     setLoading(true)
 
     try {
-      const applicantId = localStorage.getItem("applicantId")
-      if (!applicantId) {
-        throw new Error("No applicant ID found. Please start from the beginning.")
-      }
+      const applicantId = localStorage.getItem("applicantId") || ""
+      if (!applicantId) throw new Error("Missing applicant ID")
 
       const { error: upsertError } = await supabase
-        .from("worker_profiles")
+        .from("worker")
         .upsert({
           applicant_id: applicantId,
           first_name: form.firstName.trim(),
@@ -105,176 +115,252 @@ export default function Step1Review() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-teal-400 to-emerald-500 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden w-full max-w-[1000px] flex flex-col lg:flex-row">
-
+    <div className="min-h-screen bg-[#1db4a3] flex items-center justify-center p-4">
+      <div 
+        className="bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative mx-auto"
+        style={{
+          width: '1060px',
+          height: '944px',
+          minWidth: '1060px',
+          maxWidth: '1060px',
+          minHeight: '650px',
+        }}
+      >
         {/* LEFT - Form */}
-        <div className="flex-1 p-8 lg:p-12">
-          <h2 className="text-2xl font-semibold text-black mb-6">
-            Review resume details
-          </h2>
+        <div className="w-full md:w-[65%] p-10 flex flex-col justify-between">
+          <div>
+            <OnboardingStepper currentStep={1} />
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">
-              {error}
-            </div>
-          )}
+            <h2 className="text-[22px] font-bold text-[#1e293b] mb-8 mt-6">
+              Review resume details
+            </h2>
 
-          <div className="space-y-6">
-            {/* Name */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-5">
+              {/* Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">First Name</label>
+                  <div className="relative">
+                    <input
+                      value={form.firstName}
+                      onChange={(e) => handleChange("firstName", e.target.value)}
+                      className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm bg-white font-medium"
+                      placeholder="First Name"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">Last Name</label>
+                  <input
+                    value={form.lastName}
+                    onChange={(e) => handleChange("lastName", e.target.value)}
+                    className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm bg-white"
+                    placeholder="Last Name"
+                  />
+                </div>
+              </div>
+
+              {/* Address 1 */}
               <div>
-                <label className="block text-sm font-medium text-black mb-1">First Name</label>
+                <div className="flex justify-between">
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">Address 1</label>
+                  <span className="text-[11px] text-gray-400 mt-0.5">Street Address, P.O Box</span>
+                </div>
                 <input
-                  value={form.firstName}
-                  onChange={(e) => handleChange("firstName", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                  placeholder="First Name"
+                  value={form.address1}
+                  onChange={(e) => handleChange("address1", e.target.value)}
+                  className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm bg-white"
+                  placeholder="1234 Main St, Apt 4B"
                 />
               </div>
+
+              {/* Address 2 */}
               <div>
-                <label className="block text-sm font-medium text-black mb-1">Last Name</label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="block text-[13px] font-medium text-gray-600">Address 2</label>
+                  <span className="text-[11px] text-gray-400">Apt, Suite, Building, Floor, etc...</span>
+                </div>
                 <input
-                  value={form.lastName}
-                  onChange={(e) => handleChange("lastName", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                  placeholder="Last Name"
+                  value={form.address2}
+                  onChange={(e) => handleChange("address2", e.target.value)}
+                  disabled={form.sameAsAddress1}
+                  className={`w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm
+                    ${form.sameAsAddress1 ? "bg-gray-50 text-gray-500" : "bg-white"}`}
+                  placeholder="Same as address 1"
                 />
               </div>
-            </div>
 
-            {/* Address 1 */}
-            <div>
-              <label className="block text-sm font-medium text-black mb-1">Address 1</label>
-              <input
-                value={form.address1}
-                onChange={(e) => handleChange("address1", e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                placeholder="1234 Main St, Apt 4B"
-              />
-            </div>
-
-            {/* Same as Address 1 */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.sameAsAddress1}
-                onChange={(e) => handleChange("sameAsAddress1", e.target.checked)}
-                className="w-5 h-5 accent-teal-600"
-              />
-              <span className="text-black font-medium">Same as address 1</span>
-            </label>
-
-            {/* Address 2 */}
-            <div>
-              <label className="block text-sm font-medium text-black mb-1">Address 2</label>
-              <input
-                value={form.address2}
-                onChange={(e) => handleChange("address2", e.target.value)}
-                disabled={form.sameAsAddress1}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black
-                  ${form.sameAsAddress1 ? "bg-gray-100" : ""}`}
-                placeholder="Apt, Suite, Building, Floor, etc."
-              />
-            </div>
-
-            {/* City, State, Zip */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">City</label>
-                <input
-                  value={form.city}
-                  onChange={(e) => handleChange("city", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                  placeholder="City"
-                />
+              {/* City, State */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">City</label>
+                  <div className="relative">
+                    <select
+                      value={form.city}
+                      onChange={(e) => handleChange("city", e.target.value)}
+                      className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm appearance-none bg-white font-medium"
+                    >
+                      <option value="Los Angeles">Los Angeles</option>
+                      {/* Add more as needed */}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">State</label>
+                  <div className="relative">
+                    <select
+                      value={form.state}
+                      onChange={(e) => handleChange("state", e.target.value)}
+                      className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm appearance-none bg-white font-medium"
+                    >
+                      <option value="California">California</option>
+                      {/* Add more as needed */}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">State</label>
-                <input
-                  value={form.state}
-                  onChange={(e) => handleChange("state", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                  placeholder="State"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">Zip Code</label>
-                <input
-                  value={form.zipCode}
-                  onChange={(e) => handleChange("zipCode", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                  placeholder="Zip Code"
-                />
-              </div>
-            </div>
 
-            {/* Phone & Email */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">Phone</label>
-                <input
-                  value={form.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                  placeholder="Phone"
-                />
+              {/* Phone & Email */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">Phone</label>
+                  <input
+                    value={form.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
+                    className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm bg-white"
+                    placeholder="+1-800-512-2366"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">Email</label>
+                  <input
+                    value={form.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm bg-white"
+                    placeholder="rickashton@gmail.com"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">Email</label>
-                <input
-                  value={form.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black"
-                  placeholder="Email"
-                />
-              </div>
-            </div>
 
-            {/* Job Role */}
-            <div>
-              <label className="block text-sm font-medium text-black mb-1">Job Role</label>
-              <select
-                value={form.jobRole}
-                onChange={(e) => handleChange("jobRole", e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-black bg-white"
-              >
-                <option value="">Select role</option>
-                <option value="CNA">CNA</option>
-                <option value="RN">RN</option>
-                <option value="LVN">LVN</option>
-                <option value="Medical Assistant">Medical Assistant</option>
-                <option value="Caregiver">Caregiver</option>
-              </select>
+              {/* Zip & Job Role */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">Zip Code</label>
+                  <input
+                    value={form.zipCode}
+                    onChange={(e) => handleChange("zipCode", e.target.value)}
+                    className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm bg-white"
+                    placeholder="40170"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-600 mb-1.5">Job Role</label>
+                  <div className="relative">
+                    <select
+                      value={form.jobRole}
+                      onChange={(e) => handleChange("jobRole", e.target.value)}
+                      className="w-full px-4 h-[56px] border border-gray-200 rounded-md focus:border-[#1db4a3] focus:outline-none text-[#1e293b] text-sm appearance-none bg-white font-medium"
+                    >
+                      <option value="">CNA</option>
+                      <option value="RN">RN</option>
+                      <option value="LVN">LVN</option>
+                      <option value="Medical Assistant">Medical Assistant</option>
+                      <option value="Caregiver">Caregiver</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-4 mt-10">
+          <div className="flex justify-end gap-3 mt-10">
             <button
               onClick={() => router.back()}
-              className="px-8 py-3 border border-gray-400 text-black font-medium rounded-xl hover:bg-gray-50 transition"
+              className="cursor-pointer px-6 py-2.5 border border-[#1db4a3] text-[#1db4a3] text-sm font-medium rounded-lg hover:bg-teal-50 transition"
             >
               Back
             </button>
             <button
               onClick={handleSaveAndContinue}
               disabled={loading}
-              className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="cursor-pointer px-6 py-2.5 bg-[#1db4a3] hover:bg-teal-600 text-white text-sm font-medium rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading ? "Saving..." : "Save & continue"}
             </button>
           </div>
         </div>
 
-        {/* RIGHT - Branding */}
-        <div className="w-full lg:w-1/3 bg-gray-100 flex items-center justify-center p-8 lg:p-0">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-black mb-2">NEXUS</div>
-            <p className="text-sm text-gray-600">MedPro Staffing</p>
-            <p className="mt-6 text-xs text-gray-500">
-              Connecting Healthcare professionals with service providers
-            </p>
+        {/* RIGHT - Branding and Image */}
+        <div className="hidden md:block w-[35%] relative bg-gray-50">
+          <div className="absolute inset-0 z-0">
+            {/* You'll need to make sure the image path matches what you have or I can generate a placeholder */}
+            <Image 
+              src="/images/nurse.jpg" 
+              alt="Healthcare professional smiling" 
+              fill 
+              className="object-cover object-top opacity-50 grayscale" 
+              priority
+            />
+            {/* Gradient overlay to match the original soft fade */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/40 to-white"></div>
+          </div>
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-10">
+            <div className="mb-6">
+              <Image
+                src="/images/new-logo-nexus.svg"
+                alt="Nexus MedPro Logo"
+                width={204}
+                height={60}
+                priority
+              />
+            </div>
+
+            <div className="w-full max-w-[280px]">
+              <div className="w-full h-[1px] bg-gray-300 relative mb-6">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1 flex items-center justify-center]">
+                  {/* <div className="w-[10px] h-[10px] bg-[#1cb5a3] rounded-full"></div> */}
+               <Image
+                  src="/icons/circle-star-icon.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="h-6 w-6 flex-none"
+                />
+                </div>
+              </div>
+              <p 
+                className="text-[#1e293b]"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 400,
+                  fontSize: '16px',
+                  lineHeight: '24px',
+                  textAlign: 'center',
+                }}
+              >
+                Nexus MedPro Staffing <span className="mx-0.5">–</span> Connecting Healthcare professionals with service providers
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -286,11 +372,11 @@ export default function Step1Review() {
             <div className="mx-auto w-16 h-16 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-4xl mb-4">
               ✅
             </div>
-            <h3 className="text-2xl font-semibold text-black mb-2">Saved Successfully!</h3>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-2">Saved Successfully!</h3>
             <p className="text-gray-600 mb-6">Your information has been saved.</p>
             <button
               onClick={() => router.push("/application/step-2-license")}
-              className="w-full py-3 bg-teal-600 text-white font-medium rounded-xl hover:bg-teal-700"
+              className="cursor-pointer w-full py-3 bg-[#1db4a3] text-white font-medium rounded-xl hover:bg-teal-600"
             >
               Continue to Next Step
             </button>
