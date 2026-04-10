@@ -57,6 +57,7 @@ export default function SummaryPage() {
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const [resumeUploaded, setResumeUploaded] = useState(false)
 
@@ -130,7 +131,7 @@ export default function SummaryPage() {
         .from("skill_assessments")
         .select("id")
         .eq("completed", true)
-        .in("worker_id", [workerId, user.id])
+        .eq("user_id", user.id)
       if (aErr) {
         console.error("[step-6-summary] skill_assessments", aErr)
         setSkillsCompleted(0)
@@ -145,15 +146,15 @@ export default function SummaryPage() {
 
       const applicantId = user.id
       const reqRes = await fetch(
-        `/api/onboarding/worker-requirements?applicantId=${encodeURIComponent(applicantId)}`
+        `/api/onboarding/worker-documents?applicantId=${encodeURIComponent(applicantId)}`
       )
       const reqJson = (await reqRes.json().catch(() => ({}))) as {
-        requirements?: Record<string, unknown> | null
+        documents?: Record<string, unknown> | null
       }
-      const r = reqJson.requirements || {}
+      const r = reqJson.documents || {}
       const tp = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "")
-      setSsnUploaded(Boolean(tp(r["ssn_card_front_path"]) || tp(r["ssn_card_path"])))
-      setDlUploaded(Boolean(tp(r["drivers_license_front_path"]) || tp(r["drivers_license_path"])))
+      setSsnUploaded(Boolean(tp(r["ssn_url"])))
+      setDlUploaded(Boolean(tp(r["drivers_license_url"])))
 
       // Step 5: references count
       const { count, error: rErr } = await supabase
@@ -190,6 +191,30 @@ export default function SummaryPage() {
   }, [authDocsComplete, referencesComplete, requirementsComplete, resumeUploaded, skillsComplete])
 
   const totalSections = 5
+
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const user = userData?.user
+      if (!user) throw new Error("Please sign in to submit your application.")
+
+      const res = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicantId: user.id }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) throw new Error(json.error || "Could not submit application.")
+
+      router.push("/application/application-received")
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Submit failed"
+      setLoadError(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <OnboardingLayout>
@@ -294,13 +319,13 @@ export default function SummaryPage() {
 
         <button
           type="button"
-          disabled={loading}
-          onClick={() => router.push("/application/step-1-success")}
+          disabled={loading || submitting}
+          onClick={() => void handleSubmit()}
           className={`px-6 py-2.5 min-w-[160px] rounded-lg text-white font-medium transition ${
-            loading ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700 shadow-sm"
+            loading || submitting ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700 shadow-sm"
           }`}
         >
-          {loading ? "Loading…" : "Save & Continue"}
+          {loading ? "Loading…" : submitting ? "Saving…" : "Save & Continue"}
         </button>
       </div>
     </OnboardingLayout>
