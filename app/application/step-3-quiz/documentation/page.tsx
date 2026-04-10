@@ -9,6 +9,7 @@ import { DOCUMENTATION_CATEGORY_ID } from "@/lib/documentation-category"
 /** `skill_assessments.worker_id` = auth user id; `category` matches `skill_categories.slug` */
 const CATEGORY_SLUG = "documentation"
 const PAGE_SIZE = 5
+const DISPLAY_TITLE = "Ethical Standards & Documentation"
 
 type QuestionRow = {
   id: string
@@ -110,10 +111,17 @@ export default function DocumentationQuiz() {
         return
       }
 
+      const { data: worker } = await supabase
+        .from("worker")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle()
+      const workerId = worker?.id ? String(worker.id) : user.id
+
       const { data: row } = await supabase
         .from("skill_assessments")
         .select("answers")
-        .eq("worker_id", user.id)
+        .eq("worker_id", workerId)
         .eq("category", CATEGORY_SLUG)
         .maybeSingle()
 
@@ -162,12 +170,23 @@ export default function DocumentationQuiz() {
       return false
     }
     const user = userData.user
+    const { data: worker, error: wErr } = await supabase
+      .from("worker")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (wErr || !worker?.id) {
+      alert("Worker profile not found. Please complete Step 1 first.")
+      return false
+    }
+    const workerId = String(worker.id)
     const cleanAnswers = JSON.parse(JSON.stringify(answers)) as Record<string, number>
 
     const { data: existing, error: findErr } = await supabase
       .from("skill_assessments")
       .select("id")
-      .eq("worker_id", user.id)
+      .eq("worker_id", workerId)
       .eq("category", CATEGORY_SLUG)
       .maybeSingle()
 
@@ -193,7 +212,7 @@ export default function DocumentationQuiz() {
       }
     } else {
       const { error: insErr } = await supabase.from("skill_assessments").insert({
-        worker_id: user.id,
+        worker_id: workerId,
         category: CATEGORY_SLUG,
         answers: cleanAnswers,
         completed,
@@ -201,7 +220,14 @@ export default function DocumentationQuiz() {
 
       if (insErr) {
         console.error(insErr)
-        alert(insErr.message)
+        const e = insErr as { code?: string; message?: string }
+        if (e.code === "23505" && (e.message || "").includes("skill_assessments_worker_id_key")) {
+          alert(
+            'Database constraint is still UNIQUE(worker_id). Apply the migration that replaces it with UNIQUE(worker_id, category) (see supabase/migrations/20260410194500_create_skill_assessments.sql), then try again.'
+          )
+        } else {
+          alert(insErr.message)
+        }
         return false
       }
     }
@@ -299,13 +325,15 @@ export default function DocumentationQuiz() {
     <div className="min-h-screen bg-teal-600 flex items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-[1100px] bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden">
         <div className="flex-1 p-6 md:p-10 min-w-0">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{category.title}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{DISPLAY_TITLE}</h2>
 
           {category.description ? (
             <p className="text-gray-600 text-sm mb-2">{category.description}</p>
           ) : null}
 
-          <p className="text-gray-800 mb-6">Answer the following questions</p>
+          <p className="text-gray-800 mb-6">
+            Answer the following questions about ethical standards, professionalism, and documentation practices.
+          </p>
 
           {questions.length === 0 ? (
             <p className="text-sm text-gray-600 mb-8">

@@ -65,6 +65,26 @@ function requireZohoSuccess(json: Record<string, unknown>, ctx: string): void {
   }
 }
 
+async function loadAuthorizationPdfBuffer(opts: {
+  primaryUrl: string
+  fallbackUrl?: string
+}): Promise<Buffer> {
+  const tryFetch = async (u: string) => {
+    const r = await fetch(u)
+    return { r, u }
+  }
+
+  const primary = await tryFetch(opts.primaryUrl)
+  if (primary.r.ok) return Buffer.from(await primary.r.arrayBuffer())
+
+  if (opts.fallbackUrl && opts.fallbackUrl !== opts.primaryUrl) {
+    const fb = await tryFetch(opts.fallbackUrl)
+    if (fb.r.ok) return Buffer.from(await fb.r.arrayBuffer())
+  }
+
+  throw new Error(`Could not load authorization PDF (${primary.r.status})`)
+}
+
 export async function createZohoEmbeddedSigningSession(params: {
   email: string
   name: string
@@ -84,9 +104,8 @@ export async function createZohoEmbeddedSigningSession(params: {
     appUrl = ""
   }
 
-  const pdfUrl =
-    process.env.AUTHORIZATION_PDF_URL?.trim() ||
-    (appUrl ? `${appUrl}/docs/Authorization_agreement.pdf` : "")
+  const localPdfUrl = appUrl ? `${appUrl}/docs/Authorization_agreement.pdf` : ""
+  const pdfUrl = process.env.AUTHORIZATION_PDF_URL?.trim() || localPdfUrl
 
   if (!pdfUrl) {
     throw new Error(
@@ -104,11 +123,10 @@ export async function createZohoEmbeddedSigningSession(params: {
   const signCompletedUrl = overrideCompleted ? normalizeRedirectUrl(overrideCompleted) : callbackUrl
   const useRedirectPages = signCompletedUrl.startsWith("https://")
 
-  const pdfRes = await fetch(pdfUrl)
-  if (!pdfRes.ok) {
-    throw new Error(`Could not load authorization PDF (${pdfRes.status})`)
-  }
-  const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer())
+  const pdfBuffer = await loadAuthorizationPdfBuffer({
+    primaryUrl: pdfUrl,
+    fallbackUrl: localPdfUrl || undefined,
+  })
 
   const accessToken = await getZohoSignAccessToken()
   const base = signApiBase()

@@ -31,6 +31,8 @@ function isPdfPath(path: string) {
 export default function DocumentsPage() {
   const router = useRouter()
 
+  const [mounted, setMounted] = useState(false)
+
   const [applicantId, setApplicantId] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
   const [identityPaths, setIdentityPaths] = useState<IdentityPaths>({
@@ -52,9 +54,13 @@ export default function DocumentsPage() {
   const [isSigned, setIsSigned] = useState(false)
   const [signingCompleteManual, setSigningCompleteManual] = useState(false)
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const identityDocsComplete = useMemo(() => {
-    const { ssnFront, ssnBack, dlFront, dlBack } = identityPaths
-    return Boolean(ssnFront && ssnBack && dlFront && dlBack)
+    const { ssnFront, dlFront } = identityPaths
+    return Boolean(ssnFront && dlFront)
   }, [identityPaths])
 
   useEffect(() => {
@@ -99,32 +105,30 @@ export default function DocumentsPage() {
   const refreshIdentityDocsStatus = useCallback(async () => {
     if (!applicantId) return
     const res = await fetch(
-      `/api/onboarding/worker-requirements?applicantId=${encodeURIComponent(applicantId)}`
+      `/api/onboarding/worker-documents?applicantId=${encodeURIComponent(applicantId)}`
     )
     const json = (await res.json().catch(() => ({}))) as {
       error?: string
-      requirements?: {
-        ssn_card_front_path?: string | null
-        ssn_card_back_path?: string | null
-        drivers_license_front_path?: string | null
-        drivers_license_back_path?: string | null
-        ssn_card_path?: string | null
-        drivers_license_path?: string | null
+      documents?: {
+        ssn_url?: string | null
+        ssn_back_url?: string | null
+        drivers_license_url?: string | null
+        drivers_license_back_url?: string | null
       } | null
     }
     if (!res.ok) {
-      console.error("[step-4-documents] worker-requirements api", json)
+      console.error("[step-4-documents] worker-documents api", json)
       return
     }
-    const req = json.requirements ?? null
+    const docs = json.documents ?? null
 
     const t = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null)
 
     setIdentityPaths({
-      ssnFront: t(req?.ssn_card_front_path) ?? t(req?.ssn_card_path),
-      ssnBack: t(req?.ssn_card_back_path),
-      dlFront: t(req?.drivers_license_front_path) ?? t(req?.drivers_license_path),
-      dlBack: t(req?.drivers_license_back_path),
+      ssnFront: t(docs?.ssn_url),
+      ssnBack: t(docs?.ssn_back_url),
+      dlFront: t(docs?.drivers_license_url),
+      dlBack: t(docs?.drivers_license_back_url),
     })
   }, [applicantId])
 
@@ -249,7 +253,7 @@ export default function DocumentsPage() {
     }
 
     if (!identityDocsComplete) {
-      setError("Upload SSN and driver’s license (front and back) on the identity step.")
+      setError("Upload SSN and driver’s license (front) on the identity step.")
       return
     }
 
@@ -263,9 +267,9 @@ export default function DocumentsPage() {
 
     try {
       const ssn_url = identityPaths.ssnFront ? publicUrl(identityPaths.ssnFront) : null
-      const ssn_back_url = identityPaths.ssnBack ? publicUrl(identityPaths.ssnBack) : null
       const drivers_license_url = identityPaths.dlFront ? publicUrl(identityPaths.dlFront) : null
-      const drivers_license_back_url = identityPaths.dlBack ? publicUrl(identityPaths.dlBack) : null
+      const ssn_back_url = null
+      const drivers_license_back_url = null
 
       const docRes = await fetch("/api/onboarding/worker-documents", {
         method: "POST",
@@ -342,6 +346,8 @@ export default function DocumentsPage() {
       </div>
     )
   }
+
+  if (!mounted) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center p-6">
@@ -464,7 +470,6 @@ export default function DocumentsPage() {
                   <p className="text-sm font-semibold text-gray-900 mb-3">SSN card</p>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <IdentityFileCard path={identityPaths.ssnFront} subtitle="Front" />
-                    <IdentityFileCard path={identityPaths.ssnBack} subtitle="Back" />
                   </div>
                 </div>
 
@@ -472,7 +477,6 @@ export default function DocumentsPage() {
                   <p className="text-sm font-semibold text-gray-900 mb-3">Driver&apos;s license</p>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <IdentityFileCard path={identityPaths.dlFront} subtitle="Front" />
-                    <IdentityFileCard path={identityPaths.dlBack} subtitle="Back" />
                   </div>
                 </div>
               </div>
@@ -494,9 +498,9 @@ export default function DocumentsPage() {
               <button
                 type="button"
                 onClick={() => void handleSaveAndContinue()}
-                disabled={saving || !agreed || !isSigned || !identityDocsComplete}
+                disabled={saving || !agreed || !identityDocsComplete}
                 className={`px-8 py-3 rounded-xl text-white font-medium min-w-[160px] transition ${
-                  saving || !agreed || !isSigned || !identityDocsComplete
+                  saving || !agreed || !identityDocsComplete
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-teal-600 hover:bg-teal-700"
                 }`}

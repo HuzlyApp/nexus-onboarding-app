@@ -1,273 +1,307 @@
 // app/application/step-6-summary/page.tsx
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { CheckCircle2, FileText, UserCheck, ShieldCheck, FileSignature } from "lucide-react"
+import { Check } from "lucide-react"
+import OnboardingLayout from "@/app/components/OnboardingLayout"
+import OnboardingStepper from "@/app/components/OnboardingStepper"
+import { supabaseBrowser as supabase } from "@/lib/supabase-browser"
 
-import OnboardingLayout from "../../components/OnboardingLayout"
-import OnboardingStepper from "@/app/components/OnboardingStepper" // adjust path if needed
-
-// Type for identity document item
-interface IdentityDoc {
-  name: string
-  url: string
+type SummaryRowProps = {
+  label: string
+  complete: boolean
+  onClick?: () => void
+  rightText?: string
 }
 
-// Type for identity documents object
-interface IdentityDocs {
-  ssn?: IdentityDoc
-  license?: IdentityDoc
-  uploadedAt?: string
+function SummaryRow({ label, complete, onClick, rightText }: SummaryRowProps) {
+  const clickable = Boolean(onClick)
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!clickable}
+      className={`w-full flex items-center justify-between rounded-md border px-4 py-3 transition ${
+        complete ? "border-teal-200 bg-teal-50" : "border-gray-200 bg-white"
+      } ${clickable ? "hover:bg-teal-50/60" : "cursor-default"}`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+            complete ? "bg-teal-600 text-white" : "border border-gray-300 text-transparent"
+          }`}
+          aria-hidden
+        >
+          <Check className="w-3.5 h-3.5" strokeWidth={3} />
+        </div>
+        <span className="text-sm font-medium text-gray-900 truncate">{label}</span>
+      </div>
+
+      <div className="flex items-center gap-3 shrink-0">
+        {rightText ? <span className="text-xs text-gray-500">{rightText}</span> : null}
+        <span className="text-gray-400" aria-hidden>
+          ›
+        </span>
+      </div>
+    </button>
+  )
 }
 
-// Type for parsed resume (adjust fields as needed)
-interface ResumeData {
-  first_name?: string
-  last_name?: string
-  job_role?: string
-  [key: string]: unknown // flexible for extra fields
+function safeCount(n: number | null | undefined) {
+  return typeof n === "number" && Number.isFinite(n) ? n : 0
 }
 
 export default function SummaryPage() {
   const router = useRouter()
 
-  const [resumeData, setResumeData] = useState<ResumeData | null>(null)
-  const [identityDocs, setIdentityDocs] = useState<IdentityDocs | null>(null)
-  const [skillStatus, setSkillStatus] = useState<string>("0 of 3 Completed")
-  const [referencesCount, setReferencesCount] = useState<number>(0)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
-  // Load summary data safely
-  useEffect(() => {
-    let isMounted = true
+  const [resumeUploaded, setResumeUploaded] = useState(false)
 
-    // 1. Resume
-    const storedResume = localStorage.getItem("parsedResume")
-    if (storedResume && isMounted) {
-      try {
-        const parsed = JSON.parse(storedResume)
-        setResumeData(parsed)
-      } catch (e) {
-        console.error("Failed to parse resume:", e)
+  const [reqLicense, setReqLicense] = useState(false)
+  const [reqTb, setReqTb] = useState(false)
+  const [reqCpr, setReqCpr] = useState(false)
+
+  const [skillsCompleted, setSkillsCompleted] = useState(0)
+  const [skillsTotal, setSkillsTotal] = useState(0)
+
+  const [authSigned, setAuthSigned] = useState(false)
+  const [ssnUploaded, setSsnUploaded] = useState(false)
+  const [dlUploaded, setDlUploaded] = useState(false)
+
+  const [referencesCount, setReferencesCount] = useState(0)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const { data: userData, error: authErr } = await supabase.auth.getUser()
+      const user = userData?.user
+      if (authErr || !user) {
+        setLoadError("Please sign in to view your summary.")
+        setLoading(false)
+        return
       }
-    }
 
-    // 2. Identity Documents (SSN + Driver's License)
-    const storedIdentity = localStorage.getItem("identityDocuments")
-    if (storedIdentity && isMounted) {
-      try {
-        const parsed = JSON.parse(storedIdentity)
-        if (parsed?.uploadedAt) {
-          const uploadedTime = new Date(parsed.uploadedAt).getTime()
-          if (uploadedTime > Date.now() - 60 * 60 * 1000) { // 1 hour
-            setIdentityDocs(parsed)
-          } else {
-            localStorage.removeItem("identityDocuments")
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse identityDocuments:", e)
-        localStorage.removeItem("identityDocuments")
+      // Resume is not persisted to DB in the current flow; use localStorage as source of truth.
+      const resumeName = localStorage.getItem("resumeName")
+      const parsedResume = localStorage.getItem("parsedResume")
+      setResumeUploaded(Boolean((resumeName && resumeName.trim()) || (parsedResume && parsedResume.trim())))
+
+      // Worker id
+      const { data: worker, error: wErr } = await supabase
+        .from("worker")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle()
+      if (wErr) throw new Error(wErr.message || "Could not load worker profile.")
+      if (!worker?.id) throw new Error("Worker profile not found. Please complete Step 1 first.")
+      const workerId = String(worker.id)
+
+      // Step 2 requirements (worker_documents)
+      const { data: docs, error: dErr } = await supabase
+        .from("worker_documents")
+        .select("nursing_license_url, tb_test_url, cpr_certification_url")
+        .eq("worker_id", workerId)
+        .maybeSingle()
+      if (dErr) {
+        // If the table/columns aren't migrated yet, treat as incomplete.
+        console.error("[step-6-summary] worker_documents", dErr)
+      } else {
+        const t = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "")
+        setReqLicense(Boolean(t(docs?.nursing_license_url)))
+        setReqTb(Boolean(t(docs?.tb_test_url)))
+        setReqCpr(Boolean(t(docs?.cpr_certification_url)))
       }
-    }
 
-    // 3. Skill status (make dynamic from skill pages)
-    const storedSkill = localStorage.getItem("skillStatus")
-    if (storedSkill && isMounted) {
-      setSkillStatus(storedSkill)
-    }
+      // Skill assessment (count completed vs categories)
+      const { data: cats, error: cErr } = await supabase.from("skill_categories").select("id")
+      if (cErr) {
+        console.error("[step-6-summary] skill_categories", cErr)
+        setSkillsTotal(0)
+      } else {
+        setSkillsTotal((cats ?? []).length)
+      }
 
-    // 4. References count (make dynamic from step-5)
-    const storedRefs = localStorage.getItem("referencesCount")
-    if (storedRefs && isMounted) {
-      setReferencesCount(Number(storedRefs) || 0)
-    }
+      // Some parts of the app historically wrote assessments with worker_id = user.id; support both.
+      const { data: doneA, error: aErr } = await supabase
+        .from("skill_assessments")
+        .select("id")
+        .eq("completed", true)
+        .in("worker_id", [workerId, user.id])
+      if (aErr) {
+        console.error("[step-6-summary] skill_assessments", aErr)
+        setSkillsCompleted(0)
+      } else {
+        setSkillsCompleted((doneA ?? []).length)
+      }
 
-    return () => {
-      isMounted = false
+      // Step 4: authorization + identity docs
+      // Signed: if we have an envelope/request id stored locally, treat as signed for UI purposes.
+      const signingRequestId = localStorage.getItem("signingRequestId")
+      setAuthSigned(Boolean(signingRequestId && signingRequestId.trim()))
+
+      const applicantId = user.id
+      const reqRes = await fetch(
+        `/api/onboarding/worker-requirements?applicantId=${encodeURIComponent(applicantId)}`
+      )
+      const reqJson = (await reqRes.json().catch(() => ({}))) as {
+        requirements?: Record<string, unknown> | null
+      }
+      const r = reqJson.requirements || {}
+      const tp = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "")
+      setSsnUploaded(Boolean(tp(r["ssn_card_front_path"]) || tp(r["ssn_card_path"])))
+      setDlUploaded(Boolean(tp(r["drivers_license_front_path"]) || tp(r["drivers_license_path"])))
+
+      // Step 5: references count
+      const { count, error: rErr } = await supabase
+        .from("worker_references")
+        .select("id", { count: "exact", head: true })
+        .eq("worker_id", workerId)
+      if (rErr) {
+        console.error("[step-6-summary] worker_references", rErr)
+        setReferencesCount(0)
+      } else {
+        setReferencesCount(safeCount(count))
+      }
+
+      setLoading(false)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Could not load summary."
+      setLoadError(msg)
+      setLoading(false)
     }
   }, [])
 
-  const handleFinalSubmit = () => {
-    setLoading(true)
+  useEffect(() => {
+    void load()
+  }, [load])
 
-    // Optional: mark application complete in Supabase
-    // await supabase.from("applications").update({ status: "submitted" }).eq("applicant_id", ...)
+  const requirementsComplete = reqLicense && reqTb && reqCpr
+  const skillsComplete = skillsTotal > 0 ? skillsCompleted >= skillsTotal : skillsCompleted > 0
+  const authDocsComplete = authSigned && ssnUploaded && dlUploaded
+  const referencesComplete = referencesCount >= 2
 
-    // Clean up onboarding localStorage
-    localStorage.removeItem("parsedResume")
-    localStorage.removeItem("identityDocuments")
-    localStorage.removeItem("skillStatus")
-    localStorage.removeItem("referencesCount")
-    // ... remove other keys you used
+  const completedSections = useMemo(() => {
+    return [resumeUploaded, requirementsComplete, skillsComplete, authDocsComplete, referencesComplete].filter(Boolean)
+      .length
+  }, [authDocsComplete, referencesComplete, requirementsComplete, resumeUploaded, skillsComplete])
 
-    // Redirect to success page
-    router.push("/application/success")
-  }
+  const totalSections = 5
 
   return (
     <OnboardingLayout>
-      <div className="min-h-screen bg-gradient-to-r from-teal-400 to-emerald-500 flex items-center justify-center p-6 md:p-12">
-        <div className="w-full max-w-[1280px] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-          {/* LEFT - Summary Content */}
-          <div className="flex-1 p-8 md:p-12">
-            <OnboardingStepper currentStep={6} />
+      <OnboardingStepper currentStep={6} />
 
-            <div className="flex justify-between items-center mt-8 mb-8">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Summary
-              </h1>
-              <span className="text-sm font-medium text-gray-600">
-                All Steps Completed
-              </span>
-            </div>
+      <div className="flex items-center justify-between mt-6 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Summary</h1>
+        <span className="text-xs text-gray-500">
+          {completedSections} of {totalSections} Completed
+        </span>
+      </div>
 
-            {/* Resume */}
-            <section className="mb-10">
-              <h3 className="text-sm text-gray-600 font-medium mb-3 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                Resume Uploaded
-              </h3>
-              {resumeData ? (
-                <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-                  <p className="font-medium text-teal-800">
-                    {resumeData.first_name} {resumeData.last_name || ""}s Resume
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {resumeData.job_role || "Healthcare Professional"} • Uploaded
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 text-gray-500 italic">
-                  No resume data found
-                </div>
-              )}
-            </section>
+      {loadError ? (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="font-medium">Could not load summary</p>
+          <p className="mt-1">{loadError}</p>
+          <button type="button" onClick={() => void load()} className="mt-2 underline font-medium">
+            Try again
+          </button>
+        </div>
+      ) : null}
 
-            {/* Skill Assessment */}
-            <section className="mb-10">
-              <h3 className="text-sm text-gray-600 font-medium mb-3 flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-teal-600" />
-                Skill Assessment
-              </h3>
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-                <p className="font-medium text-teal-800">{skillStatus}</p>
-              </div>
-            </section>
+      <div className="space-y-6">
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Resume Uploaded</p>
+          <SummaryRow
+            label={resumeUploaded ? "Resume Uploaded" : "Upload Resume"}
+            complete={resumeUploaded}
+            onClick={() => router.push("/application/step-1-upload")}
+          />
+        </div>
 
-            {/* Authorizations & Documents */}
-            <section className="mb-10">
-              <h3 className="text-sm text-gray-600 font-medium mb-3 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-teal-600" />
-                Authorizations & Documents
-              </h3>
-              <div className="space-y-4">
-                <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-                  <p className="font-medium text-teal-800">Authorization Agreement</p>
-                  <p className="text-sm text-gray-600 mt-1">Signed</p>
-                </div>
-
-                {identityDocs?.ssn && (
-                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-20 h-14 bg-gray-200 rounded overflow-hidden flex-shrink-0">
-                        <Image
-                          src={identityDocs.ssn.url}
-                          alt="SSN Card preview"
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                      <div>
-                        <p className="font-medium text-teal-800">SSN Card</p>
-                        <p className="text-sm text-gray-600">{identityDocs.ssn.name}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {identityDocs?.license && (
-                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-20 h-14 bg-gray-200 rounded overflow-hidden flex-shrink-0">
-                        <Image
-                          src={identityDocs.license.url}
-                          alt="Driver's License preview"
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                      <div>
-                        <p className="font-medium text-teal-800">Drivers License</p>
-                        <p className="text-sm text-gray-600">{identityDocs.license.name}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* References */}
-            <section className="mb-10">
-              <h3 className="text-sm text-gray-600 font-medium mb-3 flex items-center gap-2">
-                <FileSignature className="w-5 h-5 text-teal-600" />
-                References
-              </h3>
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-                <p className="font-medium text-teal-800">
-                  {referencesCount} References Added
-                </p>
-              </div>
-            </section>
-
-            {/* Final Buttons */}
-            <div className="flex justify-end gap-4 mt-12">
-              <button
-                onClick={() => router.back()}
-                className="px-8 py-3 border border-gray-400 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition"
-              >
-                Back
-              </button>
-
-              <button
-                onClick={handleFinalSubmit}
-                disabled={loading}
-                className={`px-8 py-3 min-w-[180px] rounded-xl text-white font-medium transition shadow-sm
-                  ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"}
-                `}
-              >
-                {loading ? "Finalizing..." : "Save & Finish"}
-              </button>
-            </div>
-          </div>
-
-          {/* RIGHT - Branding Image */}
-          <div className="hidden md:block w-1/3 relative min-h-[600px]">
-            <Image
-              src="/images/nurse.jpg"
-              alt="Nurse"
-              fill
-              className="object-cover grayscale"
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Requirements</p>
+          <div className="space-y-2">
+            <SummaryRow
+              label="Nursing License"
+              complete={reqLicense}
+              onClick={() => router.push("/application/step-2-license")}
             />
-            <div className="absolute inset-0 bg-white/60" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
-              <Image
-                src="/images/nexus-logo.png"
-                alt="Nexus Logo"
-                width={180}
-                height={60}
-                className="mb-8"
-              />
-              <p className="text-gray-700 text-sm leading-relaxed max-w-xs">
-                Nexus MedPro Staffing – Connecting Healthcare professionals with service providers
-              </p>
-            </div>
+            <SummaryRow
+              label="TB Test"
+              complete={reqTb}
+              onClick={() => router.push("/application/step-2-license")}
+            />
+            <SummaryRow
+              label="CPR Certifications"
+              complete={reqCpr}
+              onClick={() => router.push("/application/step-2-license")}
+            />
           </div>
         </div>
+
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Skill Assessment</p>
+          <SummaryRow
+            label={`${skillsCompleted} of ${skillsTotal || 0} Completed`}
+            complete={skillsComplete}
+            onClick={() => router.push("/application/step-3-assessment")}
+          />
+        </div>
+
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Authorizations &amp; Documents</p>
+          <div className="space-y-2">
+            <SummaryRow
+              label="Authorization Agreement"
+              complete={authSigned}
+              onClick={() => router.push("/application/step-4-documents")}
+            />
+            <SummaryRow
+              label="SSN Card"
+              complete={ssnUploaded}
+              onClick={() => router.push("/application/step-4-identity")}
+            />
+            <SummaryRow
+              label="Driver's License"
+              complete={dlUploaded}
+              onClick={() => router.push("/application/step-4-identity")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">References</p>
+          <SummaryRow
+            label={`${referencesCount} of 3 Added`}
+            complete={referencesComplete}
+            onClick={() => router.push("/application/step-5-add-references")}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-between mt-10">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="px-6 py-2.5 border border-teal-600 text-teal-700 rounded-lg hover:bg-teal-50 transition"
+        >
+          Back
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => router.push("/application/step-1-success")}
+          className={`px-6 py-2.5 min-w-[160px] rounded-lg text-white font-medium transition ${
+            loading ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700 shadow-sm"
+          }`}
+        >
+          {loading ? "Loading…" : "Save & Continue"}
+        </button>
       </div>
     </OnboardingLayout>
   )

@@ -110,10 +110,17 @@ export default function MonitoringQuiz() {
         return
       }
 
+      const { data: worker } = await supabase
+        .from("worker")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle()
+      const workerId = worker?.id ? String(worker.id) : user.id
+
       const { data: row } = await supabase
         .from("skill_assessments")
         .select("answers")
-        .eq("worker_id", user.id)
+        .eq("worker_id", workerId)
         .eq("category", CATEGORY_SLUG)
         .maybeSingle()
 
@@ -162,12 +169,23 @@ export default function MonitoringQuiz() {
       return false
     }
     const user = userData.user
+    const { data: worker, error: wErr } = await supabase
+      .from("worker")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (wErr || !worker?.id) {
+      alert("Worker profile not found. Please complete Step 1 first.")
+      return false
+    }
+    const workerId = String(worker.id)
     const cleanAnswers = JSON.parse(JSON.stringify(answers)) as Record<string, number>
 
     const { data: existing, error: findErr } = await supabase
       .from("skill_assessments")
       .select("id")
-      .eq("worker_id", user.id)
+      .eq("worker_id", workerId)
       .eq("category", CATEGORY_SLUG)
       .maybeSingle()
 
@@ -193,7 +211,7 @@ export default function MonitoringQuiz() {
       }
     } else {
       const { error: insErr } = await supabase.from("skill_assessments").insert({
-        worker_id: user.id,
+        worker_id: workerId,
         category: CATEGORY_SLUG,
         answers: cleanAnswers,
         completed,
@@ -201,7 +219,14 @@ export default function MonitoringQuiz() {
 
       if (insErr) {
         console.error(insErr)
-        alert(insErr.message)
+        const e = insErr as { code?: string; message?: string }
+        if (e.code === "23505" && (e.message || "").includes("skill_assessments_worker_id_key")) {
+          alert(
+            'Database constraint is still UNIQUE(worker_id). Apply the migration that replaces it with UNIQUE(worker_id, category) (see supabase/migrations/20260410194500_create_skill_assessments.sql), then try again.'
+          )
+        } else {
+          alert(insErr.message)
+        }
         return false
       }
     }

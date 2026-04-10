@@ -123,7 +123,7 @@ export default function BasicCareQuiz() {
       const { data: rowNew } = await supabase
         .from("skill_assessments")
         .select("answers")
-        .eq("worker_id", user.id)
+        .eq("user_id", user.id)
         .eq("category", CATEGORY_SLUG)
         .maybeSingle()
 
@@ -132,7 +132,7 @@ export default function BasicCareQuiz() {
         const { data: rowLegacy } = await supabase
           .from("skill_assessments")
           .select("answers")
-          .eq("worker_id", user.id)
+          .eq("user_id", user.id)
           .eq("category", "basic_care")
           .maybeSingle()
         if (rowLegacy?.answers) raw = rowLegacy.answers
@@ -188,7 +188,7 @@ export default function BasicCareQuiz() {
     const { data: existing, error: findErr } = await supabase
       .from("skill_assessments")
       .select("id")
-      .eq("worker_id", user.id)
+      .eq("user_id", user.id)
       .eq("category", CATEGORY_SLUG)
       .maybeSingle()
 
@@ -214,7 +214,7 @@ export default function BasicCareQuiz() {
       }
     } else {
       const { error: insErr } = await supabase.from("skill_assessments").insert({
-        worker_id: user.id,
+        user_id: user.id,
         category: CATEGORY_SLUG,
         answers: cleanAnswers,
         completed,

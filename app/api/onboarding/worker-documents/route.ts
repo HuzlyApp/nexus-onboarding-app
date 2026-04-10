@@ -25,6 +25,47 @@ const URL_KEYS = [
   "drivers_license_back_url",
 ] as const
 
+export async function GET(req: NextRequest) {
+  try {
+    const applicantId = req.nextUrl.searchParams.get("applicantId")?.trim() || ""
+    if (!applicantId) {
+      return NextResponse.json({ error: "Missing applicantId" }, { status: 400 })
+    }
+
+    const url = getSupabaseUrl()
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !key) {
+      return NextResponse.json({ error: "Supabase service role not configured" }, { status: 503 })
+    }
+
+    const supabase = createClient(url, key)
+
+    const { data: worker, error: wErr } = await supabase
+      .from("worker")
+      .select("id")
+      .eq("user_id", applicantId)
+      .maybeSingle()
+
+    if (wErr) throw wErr
+    if (!worker?.id) {
+      return NextResponse.json({ documents: null })
+    }
+
+    const { data, error } = await supabase
+      .from("worker_documents")
+      .select("*")
+      .eq("worker_id", worker.id)
+      .limit(1)
+
+    if (error) throw error
+    return NextResponse.json({ documents: data?.[0] ?? null })
+  } catch (err: unknown) {
+    console.error("[onboarding/worker-documents] GET", err)
+    const msg = err instanceof Error ? err.message : "Unexpected error"
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Body
@@ -57,9 +98,9 @@ export async function POST(req: NextRequest) {
 
     const { data: existingRows, error: selErr } = await supabase
       .from("worker_documents")
-      .select(
-        "id, nursing_license_url, tb_test_url, cpr_certification_url, ssn_url, ssn_back_url, drivers_license_url, drivers_license_back_url"
-      )
+      // Use "*" so this endpoint works even if newer columns
+      // (e.g. ssn_back_url) haven't been migrated yet.
+      .select("*")
       .eq("worker_id", worker.id)
       .limit(1)
 
@@ -78,7 +119,11 @@ export async function POST(req: NextRequest) {
         const v = body[k]
         merged[k] = v && String(v).trim() ? String(v).trim() : null
       } else {
-        merged[k] = ex[k] ?? null
+        // Only carry forward existing columns; don't send unknown keys
+        // to older schemas (would trigger "column does not exist").
+        if (Object.prototype.hasOwnProperty.call(ex, k)) {
+          merged[k] = ex[k] ?? null
+        }
       }
     }
 

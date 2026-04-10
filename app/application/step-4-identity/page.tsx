@@ -16,25 +16,20 @@ export default function Step4Identity() {
   const router = useRouter()
 
   const [ssnFront, setSsnFront] = useState<File | null>(null)
-  const [ssnBack, setSsnBack] = useState<File | null>(null)
   const [dlFront, setDlFront] = useState<File | null>(null)
-  const [dlBack, setDlBack] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const uploadFile = async (
     file: File,
     applicantId: string,
-    segment: "ssn_front" | "ssn_back" | "dl_front" | "dl_back"
+    segment: "ssn_front" | "dl_front"
   ): Promise<string> => {
     if (file.size > MAX_BYTES) {
       throw new Error("Each file must be 10 MB or smaller.")
     }
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
-    const folder =
-      segment === "ssn_front" || segment === "ssn_back"
-        ? "ssn"
-        : "drivers_license"
+    const folder = segment === "ssn_front" ? "ssn" : "drivers_license"
     const storagePath = `${folder}/${applicantId}/${segment}-${Date.now()}-${sanitizedName}`
 
     const { error: uploadError } = await supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).upload(storagePath, file, {
@@ -51,8 +46,8 @@ export default function Step4Identity() {
   const handleNext = async () => {
     setError(null)
 
-    if (!ssnFront || !ssnBack || !dlFront || !dlBack) {
-      setError("Please upload all four files: SSN front & back, and driver's license front & back.")
+    if (!ssnFront || !dlFront) {
+      setError("Please upload both files: SSN (front) and driver's license (front).")
       return
     }
 
@@ -68,28 +63,22 @@ export default function Step4Identity() {
       const applicantId = user.id
       localStorage.setItem("applicantId", applicantId)
 
-      const [pSsnF, pSsnB, pDlF, pDlB] = await Promise.all([
+      const [pSsnF, pDlF] = await Promise.all([
         uploadFile(ssnFront, applicantId, "ssn_front"),
-        uploadFile(ssnBack, applicantId, "ssn_back"),
         uploadFile(dlFront, applicantId, "dl_front"),
-        uploadFile(dlBack, applicantId, "dl_back"),
       ])
 
-      const res = await fetch("/api/onboarding/worker-requirements", {
+      const res = await fetch("/api/onboarding/worker-documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicantId,
-          ssn_card_front_path: pSsnF,
-          ssn_card_back_path: pSsnB,
-          drivers_license_front_path: pDlF,
-          drivers_license_back_path: pDlB,
-          ssn_card_path: null,
-          drivers_license_path: null,
+          ssn_url: supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).getPublicUrl(pSsnF).data.publicUrl,
+          drivers_license_url: supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).getPublicUrl(pDlF).data.publicUrl,
         }),
       })
       const json = (await res.json()) as { error?: string }
-      if (!res.ok) throw new Error(json.error || "Could not save to worker requirements")
+      if (!res.ok) throw new Error(json.error || "Could not save to worker documents")
 
       const url = (path: string) => supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).getPublicUrl(path).data.publicUrl
 
@@ -97,17 +86,13 @@ export default function Step4Identity() {
         "identityDocuments",
         JSON.stringify({
           ssnFront: { name: ssnFront.name, path: pSsnF, url: url(pSsnF) },
-          ssnBack: { name: ssnBack.name, path: pSsnB, url: url(pSsnB) },
           dlFront: { name: dlFront.name, path: pDlF, url: url(pDlF) },
-          dlBack: { name: dlBack.name, path: pDlB, url: url(pDlB) },
           uploadedAt: new Date().toISOString(),
         })
       )
 
       setSsnFront(null)
-      setSsnBack(null)
       setDlFront(null)
-      setDlBack(null)
 
       router.push("/application/step-4-documents")
     } catch (err: unknown) {
@@ -123,8 +108,7 @@ export default function Step4Identity() {
     router.push("/application/step-4-documents")
   }
 
-  const canSubmit =
-    Boolean(ssnFront && ssnBack && dlFront && dlBack) && !loading
+  const canSubmit = Boolean(ssnFront && dlFront) && !loading
 
   return (
     <OnboardingLayout>
@@ -160,15 +144,6 @@ export default function Step4Identity() {
                   accept="image/png,image/jpeg,image/jpg,application/pdf"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Back *</label>
-                <FileUploadBox
-                  inputId="identity-ssn-back"
-                  file={ssnBack}
-                  setFile={setSsnBack}
-                  accept="image/png,image/jpeg,image/jpg,application/pdf"
-                />
-              </div>
             </div>
           </div>
 
@@ -184,31 +159,13 @@ export default function Step4Identity() {
                   accept="image/png,image/jpeg,image/jpg,application/pdf"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Back *</label>
-                <FileUploadBox
-                  inputId="identity-dl-back"
-                  file={dlBack}
-                  setFile={setDlBack}
-                  accept="image/png,image/jpeg,image/jpg,application/pdf"
-                />
-              </div>
             </div>
           </div>
 
           <p className="text-xs text-gray-500">Only PNG, JPG, or PDF • Max 10 MB per file</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-4 mt-10">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            disabled={loading}
-            className="px-6 py-2.5 border border-gray-400 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Back
-          </button>
-
+        <div className="flex justify-end gap-4 mt-10">
           <button
             type="button"
             onClick={() => void handleNext()}

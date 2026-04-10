@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Check } from "lucide-react"
+import { Check, ChevronRight } from "lucide-react"
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser"
 import OnboardingStepper from "@/app/components/OnboardingStepper"
 
@@ -77,10 +77,18 @@ export default function AssessmentPage() {
       if (!user) {
         setCompletedSlugs(new Set())
       } else {
+        const { data: worker } = await supabase
+          .from("worker")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle()
+        const workerId = worker?.id ? String(worker.id) : user.id
+
         const { data: doneRows, error: aErr } = await supabase
           .from("skill_assessments")
           .select("category")
-          .eq("worker_id", user.id)
+          // Support both legacy rows (worker_id=user.id) and current rows (worker_id=worker.id)
+          .in("worker_id", [workerId, user.id])
           .eq("completed", true)
 
         if (aErr) {
@@ -124,7 +132,7 @@ export default function AssessmentPage() {
             </div>
             <Link
               href="/application/step-4-documents"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700 shrink-0 self-start sm:self-auto"
+              className="text-sm font-medium text-teal-700 hover:text-teal-900 shrink-0 self-start sm:self-auto"
             >
               Skip for Now &gt;
             </Link>
@@ -163,15 +171,17 @@ export default function AssessmentPage() {
                   type="button"
                   disabled={disabled}
                   onClick={() => goToCategory(cat)}
-                  className={`w-full text-left flex items-center justify-between border rounded-lg p-5 transition ${
+                  className={`w-full text-left flex items-center justify-between border rounded-md px-4 py-3 transition ${
                     disabled
                       ? "border-gray-200 bg-gray-50 cursor-not-allowed opacity-70"
-                      : "border-teal-400 cursor-pointer hover:bg-teal-50"
+                      : isDone
+                        ? "border-teal-200 bg-teal-50 cursor-pointer hover:bg-teal-50/70"
+                        : "border-teal-200 bg-white cursor-pointer hover:bg-teal-50/50"
                   }`}
                 >
                   <div className="flex gap-4 min-w-0">
                     <div
-                      className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold ${
                         isDone
                           ? "bg-teal-600 text-white"
                           : "border border-teal-500 text-teal-600"
@@ -185,9 +195,9 @@ export default function AssessmentPage() {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <h2 className="font-semibold text-gray-900">{cat.title}</h2>
+                      <h2 className="font-semibold text-gray-900 leading-snug">{cat.title}</h2>
                       {cat.description ? (
-                        <p className="text-sm text-gray-600 mt-0.5">{cat.description}</p>
+                        <p className="text-xs text-gray-600 mt-0.5">{cat.description}</p>
                       ) : null}
                       {disabled ? (
                         <p className="text-xs text-amber-700 mt-1">
@@ -197,19 +207,17 @@ export default function AssessmentPage() {
                       ) : null}
                     </div>
                   </div>
-                  <span className="text-teal-500 text-xl shrink-0 ml-2" aria-hidden>
-                    →
-                  </span>
+                  <ChevronRight className="w-5 h-5 text-teal-600 shrink-0 ml-2" aria-hidden />
                 </button>
               )
             })}
           </div>
 
-          <div className="flex justify-end gap-3 mt-10 pt-4">
+          <div className="flex justify-end gap-3 mt-8 pt-4">
             <button
               type="button"
               onClick={() => router.back()}
-              className="border-2 border-teal-600 text-teal-600 bg-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-teal-50 transition-colors"
+              className="border border-teal-600 text-teal-700 bg-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-teal-50 transition-colors"
             >
               Back
             </button>
