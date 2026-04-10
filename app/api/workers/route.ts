@@ -19,16 +19,30 @@ function parseStatus(v: string | null): WorkerStatus | null {
 }
 
 function statusVariants(s: WorkerStatus): string[] {
-  // Some DBs store enum/text values in Title Case (e.g. "New") instead of lowercase.
+  // Text column `status` may store Title Case; match all casings.
   const title = s.slice(0, 1).toUpperCase() + s.slice(1);
   const upper = s.toUpperCase();
   return Array.from(new Set([s, title, upper]));
 }
 
+/** Enum `worker_status` only accepts declared labels (typically lowercase); never pass "New"/"NEW". */
+function statusFilterValues(
+  s: WorkerStatus,
+  col: "worker_status" | "status"
+): string[] {
+  if (col === "worker_status") {
+    return [s];
+  }
+  return statusVariants(s);
+}
+
 export async function GET(req: Request) {
   try {
     const urlObj = new URL(req.url);
-    const status = parseStatus(urlObj.searchParams.get("status"));
+    const status = parseStatus(
+      urlObj.searchParams.get("worker_status") ??
+        urlObj.searchParams.get("status")
+    );
     const headOnly = urlObj.searchParams.get("head") === "1";
 
     const url = getSupabaseUrl();
@@ -80,7 +94,7 @@ export async function GET(req: Request) {
           const select = `${baseCols}, ${a.extra}`;
 
           if (status === "new") {
-            const variants = statusVariants(status);
+            const variants = statusFilterValues(status, a.col);
             const [rIn, rNull] = await Promise.all([
               headOnly
                 ? supabase
@@ -147,7 +161,7 @@ export async function GET(req: Request) {
             }
           } else {
             let q = supabase.from("worker").select(select, { count: "exact", head: headOnly });
-            if (status) q = q.in(a.col, statusVariants(status));
+            if (status) q = q.in(a.col, statusFilterValues(status, a.col));
             const res = await q.order("created_at", { ascending: false });
             data = (res.data as unknown[] | null) ?? null;
             error = res.error

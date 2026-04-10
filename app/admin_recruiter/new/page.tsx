@@ -131,7 +131,7 @@ export default function NewCandidatesPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch("/api/workers?status=new", { cache: "no-store" });
+      const res = await fetch("/api/workers?worker_status=new", { cache: "no-store" });
       const json = (await res.json().catch(() => ({}))) as {
         workers?: WorkerProfile[];
         total?: number;
@@ -460,9 +460,9 @@ export default function NewCandidatesPage() {
               <div className="text-center py-20 text-zinc-500 space-y-2">
                 <div>No new applicants found.</div>
                 <div className="text-xs text-zinc-400 max-w-md mx-auto">
-                  Rows need <code className="bg-zinc-100 px-1 rounded">status</code> of{" "}
-                  <code className="bg-zinc-100 px-1 rounded">new</code> (any casing) or NULL. Workers created outside
-                  this pipeline may use another status.
+                  Rows need <code className="bg-zinc-100 px-1 rounded">worker_status</code> of{" "}
+                  <code className="bg-zinc-100 px-1 rounded">new</code> (enums use lowercase) or NULL. Legacy{" "}
+                  <code className="bg-zinc-100 px-1 rounded">status</code> text is also supported.
                 </div>
               </div>
             ) : (
