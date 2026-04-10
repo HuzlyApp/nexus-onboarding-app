@@ -2,6 +2,10 @@
 
 import { useEffect,useState } from "react"
 import { supabase } from "@/lib/supabase"
+import {
+  BASIC_PATIENT_CARE_CATEGORY_ID,
+  BASIC_PATIENT_CARE_QUESTION_LIMIT,
+} from "@/lib/basic-patient-care-category"
 import { useRouter } from "next/navigation"
 
 interface Question{
@@ -29,11 +33,17 @@ export default function SkillQuiz({
 
   const load = async()=>{
 
-   const { data,error } = await supabase
-    .from("skill_question")
+   let q = supabase
+    .from("skill_questions")
     .select("id,question")
     .eq("category_id",categoryId)
-    .order("order_number",{ascending:true})
+    .order("quiz_number",{ascending:true})
+
+   if (categoryId === BASIC_PATIENT_CARE_CATEGORY_ID) {
+    q = q.limit(BASIC_PATIENT_CARE_QUESTION_LIMIT)
+   }
+
+   const { data,error } = await q
 
    if(data) setQuestions(data)
 

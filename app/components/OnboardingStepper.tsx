@@ -12,7 +12,7 @@ const steps=[
 "Add Resume",
 "Professional License",
 "Skill Assessment",
-"Authorizations",
+"Authorizations & Documents",
 "Add References",
 "Summary"
 ]

@@ -62,7 +62,12 @@ export default function RecruiterDashboard() {
         const res = await fetch("/api/workers");
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "Failed to load workers");
-        setWorkers(Array.isArray(data) ? (data as WorkerRow[]) : []);
+        const list = Array.isArray(data)
+          ? (data as WorkerRow[])
+          : Array.isArray(data?.workers)
+            ? (data.workers as WorkerRow[])
+            : [];
+        setWorkers(list);
       } catch (e) {
         console.error("Failed to load dashboard workers:", e);
         setWorkers([]);

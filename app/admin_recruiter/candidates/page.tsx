@@ -77,7 +77,11 @@ export default function CandidatesPage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data?.error || "Failed to fetch workers")
 
-        const rows: WorkerProfile[] = Array.isArray(data) ? data : []
+        const rows: WorkerProfile[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.workers)
+            ? data.workers
+            : []
         const mapped: Candidate[] = rows.map((item) => ({
           id: item.id,
           name: `${item.first_name || ""} ${item.last_name || ""}`.trim(),

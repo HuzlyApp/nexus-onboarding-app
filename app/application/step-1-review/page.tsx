@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
 import Image from "next/image"
 import OnboardingStepper from "@/app/components/OnboardingStepper"
 
@@ -67,6 +66,17 @@ export default function Step1Review() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  function describeSaveError(err: unknown): string {
+    if (err instanceof Error && err.message) return err.message
+    if (err && typeof err === "object") {
+      const e = err as { message?: string; details?: string; hint?: string; code?: string }
+      const parts = [e.message, e.details, e.hint].filter((x): x is string => Boolean(x?.trim()))
+      if (parts.length) return parts.join(" — ")
+      if (e.code) return `Could not save (${e.code})`
+    }
+    return "Failed to save data"
+  }
+
   const handleSaveAndContinue = async () => {
     setError(null)
     setLoading(true)
@@ -75,27 +85,86 @@ export default function Step1Review() {
       const applicantId = localStorage.getItem("applicantId") || ""
       if (!applicantId) throw new Error("Missing applicant ID")
 
-      const { error: upsertError } = await supabase
-        .from("worker")
-        .upsert({
-          applicant_id: applicantId,
-          first_name: form.firstName.trim(),
-          last_name: form.lastName.trim(),
-          address1: form.address1.trim(),
-          address2: form.address2.trim(),
-          city: form.city.trim(),
-          state: form.state.trim(),
-          zip_code: form.zipCode.trim(),
-          phone: form.phone.trim(),
-          email: form.email.trim(),
-          job_role: form.jobRole.trim(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "applicant_id" })
+      const payload = {
+        applicantId,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        address1: form.address1,
+        address2: form.address2,
+        city: form.city,
+        state: form.state,
+        zipCode: form.zipCode,
+        phone: form.phone,
+        email: form.email,
+        jobRole: form.jobRole,
+      }
 
-      if (upsertError) throw upsertError
+      const workerRow = {
+        user_id: applicantId,
+        first_name: form.firstName.trim(),
+        last_name: form.lastName.trim(),
+        address1: form.address1.trim(),
+        address2: form.address2.trim(),
+        city: form.city.trim(),
+        state: form.state.trim(),
+        zip: form.zipCode.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        job_role: form.jobRole.trim(),
+        updated_at: new Date().toISOString(),
+      }
 
-      // Save to localStorage for next steps
-      localStorage.setItem("parsedResume", JSON.stringify(form))
+      const saveRes = await fetch("/api/onboarding/save-worker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      let saveJson: { error?: string; hint?: string } = {}
+      try {
+        saveJson = (await saveRes.json()) as { error?: string; hint?: string }
+      } catch {
+        /* non-JSON error body */
+      }
+
+      if (
+        saveRes.status === 503 &&
+        (saveJson.error === "MISSING_SERVICE_ROLE_KEY" || saveJson.error === "MISSING_SUPABASE_URL")
+      ) {
+        const { supabaseBrowser: supabase } = await import("@/lib/supabase-browser")
+        const { error: upsertError } = await supabase
+          .from("worker")
+          .upsert(workerRow, { onConflict: "user_id" })
+        if (upsertError) {
+          throw new Error(
+            `${describeSaveError(upsertError)} To save from the server instead, add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase → Project Settings → API → service_role secret).`
+          )
+        }
+      } else if (!saveRes.ok) {
+        throw new Error(
+          saveJson.hint || saveJson.error || `Save failed (${saveRes.status})`
+        )
+      }
+
+      // Save to localStorage for next steps (snake_case keys for steps that read parsedResume)
+      localStorage.setItem(
+        "parsedResume",
+        JSON.stringify({
+          first_name: form.firstName,
+          last_name: form.lastName,
+          address1: form.address1,
+          address2: form.address2,
+          city: form.city,
+          state: form.state,
+          zipCode: form.zipCode,
+          phone: form.phone,
+          email: form.email,
+          job_role: form.jobRole,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          jobRole: form.jobRole,
+        })
+      )
 
       // Show success popup
       setSuccess(true)
@@ -106,8 +175,8 @@ export default function Step1Review() {
       }, 1200)
 
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to save data"
-      console.error(message, err)
+      const message = describeSaveError(err)
+      console.error("Save worker failed:", err)
       setError(message)
     } finally {
       setLoading(false)

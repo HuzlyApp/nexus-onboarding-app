@@ -1,236 +1,420 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser"
+import {
+  BASIC_PATIENT_CARE_CATEGORY_ID,
+  BASIC_PATIENT_CARE_QUESTION_LIMIT,
+} from "@/lib/basic-patient-care-category"
+
+const CATEGORY_SLUG = "basic-care"
+const PAGE_SIZE = 5
+
+type QuestionRow = {
+  id: string
+  question: string
+  /** Present if you add a `description` column later */
+  description?: string | null
+  quiz_number: number | null
+}
+
+type CategoryRow = {
+  id: string
+  title: string
+  description: string | null
+}
+
+/** Map legacy index-keyed answers (basic_care) onto current question ids by order. */
+function normalizeAnswers(
+  raw: unknown,
+  questions: QuestionRow[]
+): Record<string, number> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  const o = raw as Record<string, unknown>
+  const out: Record<string, number> = {}
+  const keys = Object.keys(o)
+  const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  const allUuidKeys = keys.length > 0 && keys.every((k) => uuidLike.test(k))
+  if (allUuidKeys) {
+    for (const k of keys) {
+      const v = o[k]
+      if (typeof v === "number" && v >= 1 && v <= 4) out[k] = v
+    }
+    return out
+  }
+  const allNumericKeys = keys.length > 0 && keys.every((k) => /^\d+$/.test(k))
+  if (allNumericKeys && questions.length) {
+    for (const k of keys) {
+      const idx = Number(k)
+      const v = o[k]
+      const q = questions[idx]
+      if (q && typeof v === "number" && v >= 1 && v <= 4) out[q.id] = v
+    }
+    return out
+  }
+  return out
+}
 
 export default function BasicCareQuiz() {
   const router = useRouter()
-
-  const QUESTIONS = [
-    "Activities of daily living",
-    "Body alignment and positioning",
-    "Skin care",
-    "Nutritional support",
-    "Comfort and safety",
-    "Hand hygiene",
-    "Restraints",
-    "Enemas",
-    "Ear drops",
-    "Binders",
-  ]
-
+  const [category, setCategory] = useState<CategoryRow | null>(null)
+  const [questions, setQuestions] = useState<QuestionRow[]>([])
+  const [answers, setAnswers] = useState<Record<string, number>>({})
   const [page, setPage] = useState(1)
-  const [answers, setAnswers] = useState<Record<number, number>>({})
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const start = (page - 1) * 5
-  const end = start + 5
-  const pageQuestions = QUESTIONS.slice(start, end)
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(questions.length / PAGE_SIZE) || 1),
+    [questions.length]
+  )
 
-  function selectAnswer(index: number, value: number) {
-    setAnswers((prev) => ({ ...prev, [index]: value }))
+  const start = (page - 1) * PAGE_SIZE
+  const end = Math.min(start + PAGE_SIZE, questions.length)
+  const pageQuestions = questions.slice(start, end)
+
+  const loadQuiz = useCallback(async () => {
+    setLoadError(null)
+    setLoading(true)
+    try {
+      const { data: cat, error: cErr } = await supabase
+        .from("skill_categories")
+        .select("id, title, description")
+        .eq("slug", CATEGORY_SLUG)
+        .maybeSingle()
+
+      if (cErr) throw cErr
+      if (!cat) {
+        setCategory(null)
+        setQuestions([])
+        setLoading(false)
+        return
+      }
+
+      setCategory(cat as CategoryRow)
+
+      let qBuilder = supabase
+        .from("skill_questions")
+        .select("id, question, quiz_number")
+        .eq("category_id", cat.id)
+        .order("quiz_number", { ascending: true, nullsFirst: false })
+
+      if (cat.id === BASIC_PATIENT_CARE_CATEGORY_ID) {
+        qBuilder = qBuilder.limit(BASIC_PATIENT_CARE_QUESTION_LIMIT)
+      }
+
+      const { data: qs, error: qErr } = await qBuilder
+
+      if (qErr) throw qErr
+      const ordered = (qs ?? []) as QuestionRow[]
+      setQuestions(ordered)
+
+      const { data: userData } = await supabase.auth.getUser()
+      const user = userData?.user
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      let raw: unknown = null
+      const { data: rowNew } = await supabase
+        .from("skill_assessments")
+        .select("answers")
+        .eq("worker_id", user.id)
+        .eq("category", CATEGORY_SLUG)
+        .maybeSingle()
+
+      if (rowNew?.answers) raw = rowNew.answers
+      else {
+        const { data: rowLegacy } = await supabase
+          .from("skill_assessments")
+          .select("answers")
+          .eq("worker_id", user.id)
+          .eq("category", "basic_care")
+          .maybeSingle()
+        if (rowLegacy?.answers) raw = rowLegacy.answers
+      }
+
+      setAnswers(normalizeAnswers(raw, ordered))
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : e &&
+              typeof e === "object" &&
+              "message" in e &&
+              typeof (e as { message: unknown }).message === "string"
+            ? (e as { message: string }).message
+            : "Failed to load quiz"
+      setLoadError(msg)
+      console.error("[basic-care quiz]", e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadQuiz()
+  }, [loadQuiz])
+
+  useEffect(() => {
+    setPage((p) => Math.min(p, totalPages))
+  }, [totalPages])
+
+  const selectAnswer = (questionId: string, value: number) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: value }))
   }
 
-  function isComplete() {
+  const pageComplete = () => {
     for (let i = start; i < end; i++) {
-      if (!answers[i]) return false
+      const q = questions[i]
+      if (!q || answers[q.id] == null) return false
     }
     return true
   }
 
-  // ✅ LOAD EXISTING ANSWERS
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.auth.getUser()
-      const user = data?.user
+  async function persist(completed: boolean) {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError || !userData?.user) {
+      alert("Please sign in to save your assessment.")
+      return false
+    }
+    const user = userData.user
+    const cleanAnswers = JSON.parse(JSON.stringify(answers)) as Record<string, number>
 
-      if (!user) return
+    const { data: existing, error: findErr } = await supabase
+      .from("skill_assessments")
+      .select("id")
+      .eq("worker_id", user.id)
+      .eq("category", CATEGORY_SLUG)
+      .maybeSingle()
 
-      const { data: existing } = await supabase
+    if (findErr) {
+      console.error(findErr)
+      alert(findErr.message)
+      return false
+    }
+
+    if (existing?.id) {
+      const { error: upErr } = await supabase
         .from("skill_assessments")
-        .select("answers")
-        .eq("user_id", user.id)
-        .eq("category", "basic_care")
-        .maybeSingle()
+        .update({
+          answers: cleanAnswers,
+          completed,
+        })
+        .eq("id", existing.id)
 
-      if (existing?.answers) {
-        setAnswers(existing.answers)
+      if (upErr) {
+        console.error(upErr)
+        alert(upErr.message)
+        return false
+      }
+    } else {
+      const { error: insErr } = await supabase.from("skill_assessments").insert({
+        worker_id: user.id,
+        category: CATEGORY_SLUG,
+        answers: cleanAnswers,
+        completed,
+      })
+
+      if (insErr) {
+        console.error(insErr)
+        alert(insErr.message)
+        return false
       }
     }
 
-    load()
-  }, [])
-
-  // ✅ FINAL CLEAN SAVE FUNCTION (NO ERRORS)
-  async function save() {
-    setSaving(true)
-
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser()
-
-      if (userError || !userData?.user) {
-        console.error("AUTH ERROR:", userError)
-        alert("User not authenticated")
-        return
-      }
-
-      const user = userData.user
-
-      const cleanAnswers = JSON.parse(JSON.stringify(answers))
-
-      const { data, error } = await supabase
-        .from("skill_assessments")
-        .upsert({
-          user_id: user.id,
-          category: "basic_care",
-          answers: cleanAnswers,
-        })
-        .select()
-
-      if (error) {
-        console.error("DB ERROR:", error)
-        alert(error.message)
-        return
-      }
-
-      console.log("Saved successfully:", data)
+    if (completed) {
       localStorage.setItem("basic_care_done", "true")
-    } catch (e) {
-      console.error("SAVE ERROR:", e)
+    }
+    return true
+  }
+
+  async function saveAndFinish() {
+    setSaving(true)
+    try {
+      const ok = await persist(true)
+      if (ok) router.push("/application/step-3-assessment")
     } finally {
       setSaving(false)
-      router.push("/application/step-3-assessment")
     }
   }
 
-  function next() {
-    if (!isComplete()) {
-      alert("Please answer all questions")
+  async function next() {
+    if (questions.length === 0) {
+      router.push("/application/step-3-assessment")
       return
     }
 
-    if (page === 2) {
-      save()
+    if (!pageComplete()) {
+      alert("Please answer all questions on this page.")
       return
     }
 
-    setPage(page + 1)
+    if (page >= totalPages) {
+      await saveAndFinish()
+      return
+    }
+
+    setSaving(true)
+    try {
+      const ok = await persist(false)
+      if (ok) setPage((p) => p + 1)
+    } finally {
+      setSaving(false)
+    }
   }
 
   function back() {
-    if (page > 1) setPage(page - 1)
+    if (page > 1) setPage((p) => p - 1)
+    else router.back()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-teal-600 text-white text-sm">
+        Loading quiz…
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-teal-600 text-white p-6 gap-4">
+        <p>{loadError}</p>
+        <button
+          type="button"
+          onClick={() => void loadQuiz()}
+          className="underline font-medium"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (!category) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-teal-600 p-6 text-center">
+        <p className="text-white mb-4">
+          No category found for slug <code className="bg-white/10 px-1 rounded">{CATEGORY_SLUG}</code>.
+          Add a row in <code className="bg-white/10 px-1 rounded">skill_categories</code>.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/application/step-3-assessment")}
+          className="text-white underline"
+        >
+          Back to categories
+        </button>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-teal-400 to-emerald-500">
-      <div className="w-[1100px] bg-white rounded-xl shadow-xl flex">
-
-        {/* LEFT */}
-        <div className="flex-1 p-10">
-          <h2 className="text-2xl font-bold text-black mb-2">
-            Basic Patient Care & Hygiene
+    <div className="min-h-screen bg-teal-600 flex items-center justify-center p-4 md:p-8">
+      <div className="w-full max-w-[1100px] bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 p-6 md:p-10 min-w-0">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {category.title}
           </h2>
 
-          <p className="text-black mb-6">Answer the following questions</p>
+          {category.description ? (
+            <p className="text-gray-600 text-sm mb-2">{category.description}</p>
+          ) : null}
 
-          <div className="space-y-6">
-            {pageQuestions.map((q, i) => {
-              const index = start + i
+          <p className="text-gray-800 mb-6">Answer the following questions</p>
 
-              return (
-                <div
-                  key={index}
-                  className="flex justify-between items-center border-b pb-4"
-                >
-                  <div className="text-black">
-                    {index + 1}. {q}
+          {questions.length === 0 ? (
+            <p className="text-sm text-gray-600 mb-8">
+              No questions in <code className="bg-gray-100 px-1 rounded">skill_questions</code> for this
+              category. Add rows linked to this category&apos;s id.
+            </p>
+          ) : (
+            <div className="space-y-6">
+              {pageQuestions.map((q, i) => {
+                const globalIndex = start + i
+                return (
+                  <div
+                    key={q.id}
+                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-gray-100 pb-4"
+                  >
+                    <div className="text-gray-900 min-w-0">
+                      <span className="font-medium">{globalIndex + 1}.</span> {q.question}
+                      {q.description ? (
+                        <p className="text-sm text-gray-500 mt-1">{q.description}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex gap-6 shrink-0 justify-end">
+                      {[1, 2, 3, 4].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          aria-label={`Rating ${n}`}
+                          onClick={() => selectAnswer(q.id, n)}
+                          className={`w-5 h-5 rounded-full border cursor-pointer transition-colors ${
+                            answers[q.id] === n
+                              ? "bg-teal-600 border-teal-600"
+                              : "border-gray-400 hover:border-teal-400"
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
+                )
+              })}
+            </div>
+          )}
 
-                  <div className="flex gap-6">
-                    {[1, 2, 3, 4].map((n) => (
-                      <div
-                        key={n}
-                        onClick={() => selectAnswer(index, n)}
-                        className={`w-5 h-5 rounded-full border cursor-pointer ${
-                          answers[index] === n
-                            ? "bg-teal-600 border-teal-600"
-                            : "border-gray-400"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mt-10">
+            <span className="text-gray-700 text-sm">
+              {questions.length === 0 ? "—" : `${page} of ${totalPages}`}
+            </span>
 
-          {/* FOOTER */}
-          <div className="flex justify-between mt-10">
-            <span className="text-black">{page} of 2</span>
-
-            <div className="flex gap-3">
+            <div className="flex gap-3 justify-end">
               <button
+                type="button"
                 onClick={back}
-                className="px-5 py-2 border rounded text-black"
+                className="px-5 py-2 border-2 border-gray-300 rounded-md text-gray-800 hover:bg-gray-50"
               >
                 Back
               </button>
 
               <button
-                onClick={next}
-                disabled={saving}
-                className="px-6 py-2 bg-teal-600 text-white rounded"
+                type="button"
+                onClick={() => void next()}
+                disabled={saving || questions.length === 0}
+                className="px-6 py-2 bg-teal-600 text-white rounded-md disabled:opacity-50 hover:bg-teal-700"
               >
-                {saving ? "Saving..." : page === 2 ? "Submit" : "Next"}
+                {saving
+                  ? "Saving…"
+                  : questions.length === 0
+                    ? "Continue"
+                    : page >= totalPages
+                      ? "Submit"
+                      : "Next"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* RIGHT */}
-        <div className="w-[350px] bg-gray-100 flex flex-col items-center justify-center">
-          <img src="/nexus-logo.png" className="w-40 mb-4" />
-
-          <p className="text-black text-center px-6">
-            Nexus MedPro Staffing – Connecting Healthcare professionals
+        <div className="w-full md:w-[350px] bg-gray-100 flex flex-col items-center justify-center p-8 md:min-h-[420px] relative">
+          <Image
+            src="/images/nexus-logo.png"
+            alt="Nexus MedPro Staffing"
+            width={160}
+            height={56}
+            className="mb-4 h-auto w-40"
+          />
+          <p className="text-gray-800 text-center text-sm px-4">
+            Nexus MedPro Staffing – Connecting Healthcare professionals with service providers
           </p>
         </div>
       </div>
     </div>
   )
 }
-
-/*
-=========================
-FINAL REQUIRED DATABASE
-=========================
-
-TABLE: skill_assessments
-
-Columns:
-- user_id UUID (FK → auth.users.id)
-- category TEXT
-- answers JSONB
-
-RUN THIS IN SUPABASE SQL:
-
-ALTER TABLE skill_assessments
-DROP CONSTRAINT IF EXISTS skill_assessments_user_id_fkey;
-
-ALTER TABLE skill_assessments
-ADD CONSTRAINT skill_assessments_user_id_fkey
-FOREIGN KEY (user_id)
-REFERENCES auth.users(id)
-ON DELETE CASCADE;
-
-OPTIONAL (PREVENT DUPLICATES):
-
-CREATE UNIQUE INDEX unique_user_category
-ON skill_assessments (user_id, category);
-
-RLS POLICY:
-
-(auth.uid() = user_id)
-
-*/

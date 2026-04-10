@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import {
+  BASIC_PATIENT_CARE_CATEGORY_ID,
+  BASIC_PATIENT_CARE_QUESTION_LIMIT,
+} from "@/lib/basic-patient-care-category"
 
 interface Question{
  id:string
  question:string
- description:string
- order_number:number
+ description?: string | null
+ quiz_number:number | null
 }
 
 export default function QuizPage(){
@@ -39,11 +43,17 @@ export default function QuizPage(){
 
    /* get questions */
 
-   const { data:q } = await supabase
-   .from("skill_question")
-   .select("*")
+   let qBuilder = supabase
+   .from("skill_questions")
+   .select("id, question, quiz_number")
    .eq("category_id",category.id)
-   .order("order_number",{ascending:true})
+   .order("quiz_number",{ascending:true})
+
+   if (category.id === BASIC_PATIENT_CARE_CATEGORY_ID) {
+    qBuilder = qBuilder.limit(BASIC_PATIENT_CARE_QUESTION_LIMIT)
+   }
+
+   const { data:q } = await qBuilder
 
    setQuestions(q || [])
    setLoading(false)
@@ -159,9 +169,11 @@ className="flex items-center justify-between border-b pb-4"
 {q.question}
 </div>
 
+{q.description ? (
 <div className="text-sm text-gray-400">
 {q.description}
 </div>
+) : null}
 
 </div>
 

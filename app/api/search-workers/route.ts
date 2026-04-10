@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js"
+import { getSupabaseUrl } from "@/lib/supabase-env"
 
 export async function POST(req: Request) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const url = getSupabaseUrl()
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
     return Response.json({ error: "Supabase is not configured" }, { status: 503 })

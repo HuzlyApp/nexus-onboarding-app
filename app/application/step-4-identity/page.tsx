@@ -3,7 +3,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { supabaseBrowser as supabase } from "@/lib/supabase-browser"
+import { WORKER_REQUIRED_FILES_BUCKET } from "@/lib/supabase-storage-buckets"
 
 import OnboardingLayout from "../../components/OnboardingLayout"
 import StepProgress from "../../components/StepProgress"
@@ -18,22 +19,20 @@ export default function Step4Identity() {
   const [error, setError] = useState<string | null>(null)
 
   // Helper: upload file to Supabase Storage and return public URL
-  const uploadFile = async (file: File, folder: string): Promise<string> => {
+  const uploadFile = async (file: File, applicant: string, folder: string): Promise<string> => {
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
-    const path = `${folder}/${Date.now()}-${sanitizedName}`
+    const prefix = folder === "ssn" ? "ssn" : "drivers_license"
+    const path = `${prefix}/${applicant}/${folder}-${Date.now()}-${sanitizedName}`
 
-    const { error: uploadError } = await supabase.storage
-      .from("worker_required_files")
-      .upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-      })
+    const { error: uploadError } = await supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).upload(path, file, {
+      cacheControl: "3600",
+      upsert: true,
+      contentType: file.type || "application/octet-stream",
+    })
 
     if (uploadError) throw new Error(uploadError.message || "File upload failed")
 
-    const { data: urlData } = supabase.storage
-      .from("worker_required_files")
-      .getPublicUrl(path)
+    const { data: urlData } = supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).getPublicUrl(path)
 
     if (!urlData.publicUrl) throw new Error("Could not generate public URL")
 
@@ -52,28 +51,26 @@ export default function Step4Identity() {
     setLoading(true)
 
     try {
-      // Upload files
-      const ssnUrl = await uploadFile(ssnFile, "ssn")
-      const licenseUrl = await uploadFile(licenseFile, "license")
-
-      // Get or create applicant ID
       let applicantId = localStorage.getItem("applicantId")
       if (!applicantId) {
         applicantId = crypto.randomUUID()
         localStorage.setItem("applicantId", applicantId)
       }
 
-      // Optional: save to database (worker_documents table)
-      const { error: dbError } = await supabase
-        .from("worker_documents")
-        .insert({
-          applicant_id: applicantId,
+      const ssnUrl = await uploadFile(ssnFile, applicantId, "ssn")
+      const licenseUrl = await uploadFile(licenseFile, applicantId, "license")
+
+      const docRes = await fetch("/api/onboarding/worker-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicantId,
           ssn_url: ssnUrl,
           drivers_license_url: licenseUrl,
-          uploaded_at: new Date().toISOString(),
-        })
-
-      if (dbError) throw dbError
+        }),
+      })
+      const docJson = (await docRes.json()) as { error?: string }
+      if (!docRes.ok) throw new Error(docJson.error || "Could not save document URLs")
 
       // Store previews for next page (step-4-documents)
       localStorage.setItem(

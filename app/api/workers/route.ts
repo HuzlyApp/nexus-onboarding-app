@@ -1,46 +1,55 @@
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase-env";
 
 export async function GET() {
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const url = getSupabaseUrl();
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    const anonKey = getSupabaseAnonKey();
+    /** Prefer service role; fall back to anon if missing or rejected (e.g. wrong key in .env). */
+    const keys = [serviceKey, anonKey].filter(
+      (k): k is string => Boolean(k)
+    );
 
-    if (!url || !key) {
+    if (!url || keys.length === 0) {
       return Response.json(
         { error: "Supabase is not configured" },
         { status: 503 }
       );
     }
 
-    const supabase = createClient(url, key);
+    let lastMessage = "Failed to load workers";
 
-    // ✅ Fetch workers + count
-    const { data, error, count } = await supabase
-      .from("worker")
-      .select(
-        "id, first_name, last_name, job_role, email, phone, address1, city, state, created_at",
-        { count: "exact" } // 🔥 important for total workers
-      )
-      .order("created_at", { ascending: false });
+    for (const key of keys) {
+      const supabase = createClient(url, key);
+      const { data, error, count } = await supabase
+        .from("worker")
+        .select(
+          "id, first_name, last_name, job_role, email, phone, address1, city, state, created_at",
+          { count: "exact" }
+        )
+        .order("created_at", { ascending: false });
 
-    if (error) {
+      if (!error) {
+        return Response.json({
+          total: count ?? 0,
+          workers: data ?? [],
+        });
+      }
+
+      lastMessage = error.message;
       console.error("Supabase error:", error);
-      return Response.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      const retry =
+        error.message === "Invalid API key" && key === serviceKey && anonKey;
+      if (!retry) {
+        return Response.json({ error: error.message }, { status: 500 });
+      }
     }
 
-    return Response.json({
-      total: count || 0,   // ✅ total workers
-      workers: data || [], // ✅ list of workers
-    });
-
-  } catch (err: any) {
+    return Response.json({ error: lastMessage }, { status: 500 });
+  } catch (err: unknown) {
     console.error("API ERROR:", err);
-    return Response.json(
-      { error: err.message || "Unexpected error" },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : "Unexpected error";
+    return Response.json({ error: message }, { status: 500 });
   }
 }
