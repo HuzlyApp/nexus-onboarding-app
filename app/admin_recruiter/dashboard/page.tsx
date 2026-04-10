@@ -54,23 +54,49 @@ export default function RecruiterDashboard() {
   const [loading, setLoading] = useState(true);
   const [workers, setWorkers] = useState<WorkerRow[]>([]);
   const [query, setQuery] = useState("");
+  const [counts, setCounts] = useState({
+    new: 0,
+    pending: 0,
+    approved: 0,
+    disapproved: 0,
+  });
 
   useEffect(() => {
     async function run() {
       setLoading(true);
       try {
-        const res = await fetch("/api/workers");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Failed to load workers");
-        const list = Array.isArray(data)
-          ? (data as WorkerRow[])
-          : Array.isArray(data?.workers)
-            ? (data.workers as WorkerRow[])
+        const [allRes, cNew, cPending, cApproved, cDisapproved] = await Promise.all([
+          fetch("/api/workers"),
+          fetch("/api/workers?status=new&head=1"),
+          fetch("/api/workers?status=pending&head=1"),
+          fetch("/api/workers?status=approved&head=1"),
+          fetch("/api/workers?status=disapproved&head=1"),
+        ]);
+
+        const allJson = await allRes.json();
+        if (!allRes.ok) throw new Error(allJson?.error || "Failed to load workers");
+        const list = Array.isArray(allJson)
+          ? (allJson as WorkerRow[])
+          : Array.isArray(allJson?.workers)
+            ? (allJson.workers as WorkerRow[])
             : [];
         setWorkers(list);
+
+        const parseTotal = async (r: Response) => {
+          const j = await r.json().catch(() => ({}));
+          return typeof j?.total === "number" ? j.total : 0;
+        };
+        const [n, p, a, d] = await Promise.all([
+          parseTotal(cNew),
+          parseTotal(cPending),
+          parseTotal(cApproved),
+          parseTotal(cDisapproved),
+        ]);
+        setCounts({ new: n, pending: p, approved: a, disapproved: d });
       } catch (e) {
         console.error("Failed to load dashboard workers:", e);
         setWorkers([]);
+        setCounts({ new: 0, pending: 0, approved: 0, disapproved: 0 });
       } finally {
         setLoading(false);
       }
@@ -230,10 +256,10 @@ export default function RecruiterDashboard() {
               </Link>
 
               {[
-                { label: "New applicants", href: "/admin_recruiter/new", chip: "New", chipClass: "bg-slate-100 text-slate-700" },
-                { label: "Pending applicants", href: "/admin_recruiter/pending", chip: "Pending", chipClass: "bg-amber-100 text-amber-800" },
-                { label: "Approved applicants", href: "/admin_recruiter/approved", chip: "Approved", chipClass: "bg-emerald-100 text-emerald-800" },
-                { label: "Disapproved applicants", href: "/admin_recruiter/disapproved", chip: "Disapproved", chipClass: "bg-rose-100 text-rose-800" },
+                { key: "new" as const, label: "New applicants", href: "/admin_recruiter/new", chip: "New", chipClass: "bg-slate-100 text-slate-700" },
+                { key: "pending" as const, label: "Pending applicants", href: "/admin_recruiter/pending", chip: "Pending", chipClass: "bg-amber-100 text-amber-800" },
+                { key: "approved" as const, label: "Approved applicants", href: "/admin_recruiter/approved", chip: "Approved", chipClass: "bg-emerald-100 text-emerald-800" },
+                { key: "disapproved" as const, label: "Disapproved applicants", href: "/admin_recruiter/disapproved", chip: "Disapproved", chipClass: "bg-rose-100 text-rose-800" },
               ].map((c) => (
                 <Link
                   key={c.href}
@@ -244,7 +270,9 @@ export default function RecruiterDashboard() {
                     <div className="text-sm text-zinc-500">{c.label}</div>
                     <span className={`text-xs px-3 py-1 rounded-full font-medium ${c.chipClass}`}>{c.chip}</span>
                   </div>
-                  <div className="mt-3 text-3xl font-semibold text-zinc-900">—</div>
+                  <div className="mt-3 text-3xl font-semibold text-zinc-900">
+                    {loading ? "—" : String(counts[c.key])}
+                  </div>
                   <div className="mt-4 inline-flex items-center gap-2 text-sm text-teal-700">
                     Open list <ArrowRight className="w-4 h-4" />
                   </div>

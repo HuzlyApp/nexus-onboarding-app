@@ -4,6 +4,14 @@ import { getSupabaseUrl } from "@/lib/supabase-env"
 
 export const runtime = "nodejs"
 
+function isMissingColumnErr(e: unknown) {
+  const err = e as { code?: string; message?: string } | null
+  if (!err) return false
+  // Postgres undefined_column
+  if (err.code === "42703") return true
+  return typeof err.message === "string" && err.message.includes(" does not exist")
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -37,7 +45,7 @@ export async function POST(req: NextRequest) {
     const supabase = createClient(url, key)
 
     // `user_id` is the stable onboarding key (matches localStorage applicantId, must be a UUID).
-    const row = {
+    const baseRow = {
       user_id: applicantId,
       first_name: String(body.firstName ?? "").trim(),
       last_name: String(body.lastName ?? "").trim(),
@@ -52,12 +60,61 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     }
 
-    const { error } = await supabase.from("worker").upsert(row, { onConflict: "user_id" })
+    // Some DBs use `status` while others use `worker_status` (enum, constrained by worker_status_chk).
+    // We'll try status first, then worker_status, then omit entirely if neither column exists.
+    const rawStatus = String(body.status ?? "").trim()
+    const rowAttempts: Record<string, unknown>[] = [
+      rawStatus ? { ...baseRow, status: rawStatus } : { ...baseRow },
+      rawStatus ? { ...baseRow, worker_status: rawStatus } : { ...baseRow },
+      { ...baseRow },
+    ]
 
-    if (error) {
-      console.error("[onboarding/save-worker]", error)
-      const msg = [error.message, error.details, error.hint].filter(Boolean).join(" — ")
-      return NextResponse.json({ error: msg || "Database error" }, { status: 500 })
+    // Avoid upsert(..., onConflict: "user_id") — it requires a UNIQUE constraint/index on worker.user_id.
+    // Some DBs may not have run the migration yet; update-by-id / insert works everywhere.
+    const { data: existingRows, error: selErr } = await supabase
+      .from("worker")
+      .select("id")
+      .eq("user_id", applicantId)
+      .limit(1)
+
+    if (selErr) throw selErr
+    const existingId = existingRows?.[0]?.id != null ? String(existingRows[0].id) : null
+
+    if (existingId) {
+      let lastErr: unknown = null
+      for (const attempt of rowAttempts) {
+        const { user_id: _u, ...updatePayload } = attempt as Record<string, unknown>
+        const { error: upErr } = await supabase.from("worker").update(updatePayload).eq("id", existingId)
+        if (!upErr) {
+          lastErr = null
+          break
+        }
+        lastErr = upErr
+        if (!isMissingColumnErr(upErr)) break
+      }
+      if (lastErr) {
+        const upErr = lastErr as { message?: string; details?: string; hint?: string }
+        console.error("[onboarding/save-worker] update", upErr)
+        const msg = [upErr.message, upErr.details, upErr.hint].filter(Boolean).join(" — ")
+        return NextResponse.json({ error: msg || "Database error" }, { status: 500 })
+      }
+    } else {
+      let lastErr: unknown = null
+      for (const attempt of rowAttempts) {
+        const { error: insErr } = await supabase.from("worker").insert(attempt)
+        if (!insErr) {
+          lastErr = null
+          break
+        }
+        lastErr = insErr
+        if (!isMissingColumnErr(insErr)) break
+      }
+      if (lastErr) {
+        const insErr = lastErr as { message?: string; details?: string; hint?: string }
+        console.error("[onboarding/save-worker] insert", insErr)
+        const msg = [insErr.message, insErr.details, insErr.hint].filter(Boolean).join(" — ")
+        return NextResponse.json({ error: msg || "Database error" }, { status: 500 })
+      }
     }
 
     return NextResponse.json({ ok: true })

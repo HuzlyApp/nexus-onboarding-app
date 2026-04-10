@@ -82,8 +82,11 @@ export default function Step1Review() {
     setLoading(true)
 
     try {
-      const applicantId = localStorage.getItem("applicantId") || ""
-      if (!applicantId) throw new Error("Missing applicant ID")
+      // Create a new worker record on each save by generating a fresh applicantId.
+      // This prevents overwriting the previous worker row keyed by user_id.
+      const applicantId = globalThis.crypto?.randomUUID?.()
+      if (!applicantId) throw new Error("Could not generate applicant ID")
+      localStorage.setItem("applicantId", applicantId)
 
       const payload = {
         applicantId,
@@ -132,13 +135,33 @@ export default function Step1Review() {
         (saveJson.error === "MISSING_SERVICE_ROLE_KEY" || saveJson.error === "MISSING_SUPABASE_URL")
       ) {
         const { supabaseBrowser: supabase } = await import("@/lib/supabase-browser")
-        const { error: upsertError } = await supabase
+        // Avoid upsert(..., onConflict: "user_id") in the browser — it requires a UNIQUE constraint on worker.user_id.
+        // If the DB isn't migrated, upsert will either error or insert duplicates.
+        const { data: existing, error: selErr } = await supabase
           .from("worker")
-          .upsert(workerRow, { onConflict: "user_id" })
-        if (upsertError) {
+          .select("id")
+          .eq("user_id", applicantId)
+          .maybeSingle()
+        if (selErr) {
           throw new Error(
-            `${describeSaveError(upsertError)} To save from the server instead, add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase → Project Settings → API → service_role secret).`
+            `${describeSaveError(selErr)} To save from the server instead, add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase → Project Settings → API → service_role secret).`
           )
+        }
+        if (existing?.id) {
+          const { user_id: _u, ...updatePayload } = workerRow as Record<string, unknown>
+          const { error: upErr } = await supabase.from("worker").update(updatePayload).eq("id", existing.id)
+          if (upErr) {
+            throw new Error(
+              `${describeSaveError(upErr)} To save from the server instead, add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase → Project Settings → API → service_role secret).`
+            )
+          }
+        } else {
+          const { error: insErr } = await supabase.from("worker").insert(workerRow)
+          if (insErr) {
+            throw new Error(
+              `${describeSaveError(insErr)} To save from the server instead, add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase → Project Settings → API → service_role secret).`
+            )
+          }
         }
       } else if (!saveRes.ok) {
         throw new Error(

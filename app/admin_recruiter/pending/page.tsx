@@ -18,7 +18,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 type WorkerProfile = {
   id: string;
@@ -29,6 +28,7 @@ type WorkerProfile = {
   address1: string | null;
   city: string | null;
   state: string | null;
+  status?: string | null;
 };
 
 type CandidateRow = {
@@ -38,7 +38,7 @@ type CandidateRow = {
   createdAt: string | null;
   location: string;
   reference: string;
-  status: "Pending";
+  status: string;
 };
 
 const sidebarItems = [
@@ -69,6 +69,13 @@ function formatDate(iso: string | null) {
   });
 }
 
+function titleCaseStatus(s: string) {
+  const v = (s || "").trim();
+  if (!v) return "—";
+  const low = v.toLowerCase();
+  return low.slice(0, 1).toUpperCase() + low.slice(1);
+}
+
 export default function PendingCandidatesPage() {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -80,13 +87,13 @@ export default function PendingCandidatesPage() {
     async function fetchPending() {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role, created_at, address1, city, state")
-          .returns<WorkerProfile[]>()
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
+        const res = await fetch("/api/workers?status=pending");
+        const json = (await res.json().catch(() => ({}))) as {
+          workers?: WorkerProfile[];
+          error?: string;
+        };
+        if (!res.ok) throw new Error(json.error || "Failed to load workers");
+        const data = Array.isArray(json.workers) ? json.workers : [];
 
         const mapped: CandidateRow[] = (data ?? []).map((p) => {
           const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "Unnamed";
@@ -98,7 +105,7 @@ export default function PendingCandidatesPage() {
             createdAt: p.created_at,
             location,
             reference: p.id.slice(0, 6).toUpperCase(),
-            status: "Pending",
+            status: titleCaseStatus(p.status ?? "pending"),
           };
         });
 
@@ -341,7 +348,7 @@ export default function PendingCandidatesPage() {
                         </td>
                         <td className="px-4 py-4">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            Pending
+                            {r.status}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-zinc-600">{r.reference}</td>
