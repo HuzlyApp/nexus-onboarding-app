@@ -20,10 +20,8 @@ function signApiBase(): string {
 }
 
 function accountsHost(): string {
-  return (process.env.ZOHO_ACCOUNTS_HOST || process.env.ZOHO_ACCOUNTS_URL || "https://accounts.zoho.com").replace(
-    /\/$/,
-    ""
-  )
+  const raw = (process.env.ZOHO_ACCOUNTS_HOST || process.env.ZOHO_ACCOUNTS_URL || "https://accounts.zoho.com").trim()
+  return raw.replace(/\/$/, "")
 }
 
 async function getZohoSignAccessToken(): Promise<string> {
@@ -38,19 +36,41 @@ async function getZohoSignAccessToken(): Promise<string> {
     client_secret: clientSecret,
   })
 
-  const res = await fetch(`${accountsHost()}/oauth/v2/token`, {
+  const tokenUrl = `${accountsHost()}/oauth/v2/token`
+  const res = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
   })
 
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(`Zoho Sign token error: ${res.status} ${t}`)
+  const raw = await res.text()
+  let parsed: unknown = null
+  try {
+    parsed = raw ? JSON.parse(raw) : null
+  } catch {
+    parsed = null
   }
 
-  const data = (await res.json()) as ZohoTokenResponse
-  if (!data.access_token) throw new Error("Zoho Sign token response missing access_token")
+  if (!res.ok) {
+    throw new Error(
+      `Zoho Sign token error: ${res.status} ${tokenUrl} ${raw || "(empty response)"}`
+    )
+  }
+
+  const data = (parsed || {}) as Partial<ZohoTokenResponse> & {
+    error?: string
+    error_description?: string
+  }
+
+  if (!data.access_token) {
+    const details =
+      typeof data.error === "string" || typeof data.error_description === "string"
+        ? `${data.error || "missing_access_token"}${data.error_description ? ` — ${data.error_description}` : ""}`
+        : raw || "(empty response)"
+    throw new Error(
+      `Zoho Sign token response missing access_token. Check ZOHO_SIGN_REFRESH_TOKEN / ZOHO_SIGN_CLIENT_ID / ZOHO_SIGN_CLIENT_SECRET and ZOHO_ACCOUNTS_HOST. Response: ${details}`
+    )
+  }
   return data.access_token
 }
 
@@ -133,25 +153,28 @@ export async function createZohoEmbeddedSigningSession(params: {
   const authHeader = { Authorization: `Zoho-oauthtoken ${accessToken}` }
 
   const requestName = "Authorization agreement — please sign"
-  const createData: Record<string, unknown> = {
-    requests: {
-      request_name: requestName,
-      description: "Background check authorization",
-      is_sequential: true,
-      expiration_days: 30,
-      email_reminders: false,
-      actions: [
-        {
-          action_type: "SIGN",
-          recipient_email: params.email,
-          recipient_name: params.name,
-          signing_order: 0,
-          verify_recipient: false,
-          is_embedded: true,
-        },
-      ],
-    },
+  const templateId = process.env.ZOHO_SIGN_TEMPLATE_ID?.trim() || ""
+
+  // Common request payload used by both "upload PDF" and "template" flows.
+  const requestsPayload: Record<string, unknown> = {
+    request_name: requestName,
+    description: "Background check authorization",
+    is_sequential: true,
+    expiration_days: 30,
+    email_reminders: false,
+    actions: [
+      {
+        action_type: "SIGN",
+        recipient_email: params.email,
+        recipient_name: params.name,
+        signing_order: 0,
+        verify_recipient: false,
+        is_embedded: true,
+      },
+    ],
   }
+
+  const createData: Record<string, unknown> = { requests: requestsPayload }
 
   if (useRedirectPages) {
     ;(createData.requests as Record<string, unknown>).redirect_pages = {
@@ -159,83 +182,136 @@ export async function createZohoEmbeddedSigningSession(params: {
     }
   }
 
-  const createForm = new FormData()
-  createForm.append("file", new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" }), "Authorization_agreement.pdf")
-  createForm.append("data", JSON.stringify(createData))
-
-  const createRes = await fetch(`${base}/api/v1/requests`, {
-    method: "POST",
-    headers: authHeader,
-    body: createForm,
-  })
-
-  const createJson = (await createRes.json()) as Record<string, unknown>
-  if (!createRes.ok) {
-    throw new Error(`Zoho Sign create request failed: ${createRes.status} ${JSON.stringify(createJson)}`)
-  }
-  requireZohoSuccess(createJson, "Zoho Sign create")
-
-  const reqWrap = createJson.requests as {
+  // Create request either by template (preferred when configured) or by uploading the PDF.
+  let reqWrap: {
     request_id: string
     request_name: string
-    document_ids: { document_id: string }[]
-    actions: { action_id: string; recipient_email: string; recipient_name: string; action_type: string }[]
+    document_ids?: { document_id: string }[]
+    actions?: { action_id: string; recipient_email: string; recipient_name: string; action_type: string }[]
+  }
+
+  if (templateId) {
+    // Create document from template.
+    // Docs: POST /api/v1/templates/{template_id}/createdocument
+    const form = new FormData()
+    form.append("data", JSON.stringify({ requests: { ...requestsPayload, is_quicksend: true } }))
+
+    const res = await fetch(`${base}/api/v1/templates/${encodeURIComponent(templateId)}/createdocument`, {
+      method: "POST",
+      headers: authHeader,
+      body: form,
+    })
+    const json = (await res.json()) as Record<string, unknown>
+    if (!res.ok) {
+      throw new Error(`Zoho Sign create from template failed: ${res.status} ${JSON.stringify(json)}`)
+    }
+    requireZohoSuccess(json, "Zoho Sign create (template)")
+    reqWrap = json.requests as typeof reqWrap
+  } else {
+    const createForm = new FormData()
+    createForm.append(
+      "file",
+      new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" }),
+      "Authorization_agreement.pdf"
+    )
+    createForm.append("data", JSON.stringify(createData))
+
+    const createRes = await fetch(`${base}/api/v1/requests`, {
+      method: "POST",
+      headers: authHeader,
+      body: createForm,
+    })
+
+    const createJson = (await createRes.json()) as Record<string, unknown>
+    if (!createRes.ok) {
+      throw new Error(`Zoho Sign create request failed: ${createRes.status} ${JSON.stringify(createJson)}`)
+    }
+    requireZohoSuccess(createJson, "Zoho Sign create")
+    reqWrap = createJson.requests as typeof reqWrap
   }
 
   const requestId = reqWrap.request_id
+  let actionId = reqWrap.actions?.[0]?.action_id
   const documentId = reqWrap.document_ids?.[0]?.document_id
-  const actionId = reqWrap.actions?.[0]?.action_id
-  if (!requestId || !documentId || !actionId) {
-    throw new Error("Zoho Sign create response missing request_id, document_id, or action_id")
+  if (!requestId) {
+    throw new Error("Zoho Sign create response missing request_id")
   }
 
-  // Signature field — coordinates aligned with DocuSign tab (bottom area of first page).
-  const pageNo = Number(process.env.ZOHO_SIGN_SIGNATURE_PAGE_NO || "0")
-  const sigX = process.env.ZOHO_SIGN_SIGNATURE_X || "120"
-  const sigY = process.env.ZOHO_SIGN_SIGNATURE_Y || "720"
-
-  const submitData = {
-    requests: {
-      request_name: reqWrap.request_name || requestName,
-      actions: [
-        {
-          action_id: actionId,
-          recipient_email: params.email,
-          recipient_name: params.name,
-          action_type: "SIGN",
-          fields: [
-            {
-              document_id: documentId,
-              field_name: "Signature",
-              field_label: "Signature",
-              field_type_name: "Signature",
-              field_category: "image",
-              page_no: pageNo,
-              x_coord: sigX,
-              y_coord: sigY,
-              abs_width: "150",
-              abs_height: "40",
-            },
-          ],
-        },
-      ],
-    },
+  // If the template flow didn't return actions (or action_id), submit the request to generate them.
+  if (!actionId) {
+    const submitForm = new FormData()
+    submitForm.append("data", JSON.stringify({ requests: { request_name: reqWrap.request_name || requestName } }))
+    const submitRes = await fetch(`${base}/api/v1/requests/${requestId}/submit`, {
+      method: "POST",
+      headers: authHeader,
+      body: submitForm,
+    })
+    const submitJson = (await submitRes.json()) as Record<string, unknown>
+    if (!submitRes.ok) {
+      throw new Error(`Zoho Sign submit failed: ${submitRes.status} ${JSON.stringify(submitJson)}`)
+    }
+    requireZohoSuccess(submitJson, "Zoho Sign submit")
+    const wrap = submitJson.requests as { actions?: { action_id: string }[] }
+    actionId = wrap.actions?.[0]?.action_id
   }
 
-  const submitForm = new FormData()
-  submitForm.append("data", JSON.stringify(submitData))
-
-  const submitRes = await fetch(`${base}/api/v1/requests/${requestId}/submit`, {
-    method: "POST",
-    headers: authHeader,
-    body: submitForm,
-  })
-
-  const submitJson = (await submitRes.json()) as Record<string, unknown>
-  if (!submitRes.ok) {
-    throw new Error(`Zoho Sign submit failed: ${submitRes.status} ${JSON.stringify(submitJson)}`)
+  if (!actionId) {
+    throw new Error("Zoho Sign create response missing action_id")
   }
-  requireZohoSuccess(submitJson, "Zoho Sign submit")
+
+  // If we're not using a template, we must add at least one signature field before submitting.
+  // If we are using a template, fields are already defined in the template.
+  if (!templateId) {
+    if (!documentId) throw new Error("Zoho Sign create response missing document_id")
+
+    // Signature field — coordinates aligned with DocuSign tab (bottom area of first page).
+    const pageNo = Number(process.env.ZOHO_SIGN_SIGNATURE_PAGE_NO || "0")
+    const sigX = process.env.ZOHO_SIGN_SIGNATURE_X || "120"
+    const sigY = process.env.ZOHO_SIGN_SIGNATURE_Y || "720"
+
+    const submitData = {
+      requests: {
+        request_name: reqWrap.request_name || requestName,
+        actions: [
+          {
+            action_id: actionId,
+            recipient_email: params.email,
+            recipient_name: params.name,
+            action_type: "SIGN",
+            fields: [
+              {
+                document_id: documentId,
+                field_name: "Signature",
+                field_label: "Signature",
+                field_type_name: "Signature",
+                field_category: "image",
+                page_no: pageNo,
+                x_coord: sigX,
+                y_coord: sigY,
+                abs_width: "150",
+                abs_height: "40",
+              },
+            ],
+          },
+        ],
+      },
+    }
+
+    const submitForm = new FormData()
+    submitForm.append("data", JSON.stringify(submitData))
+
+    const submitRes = await fetch(`${base}/api/v1/requests/${requestId}/submit`, {
+      method: "POST",
+      headers: authHeader,
+      body: submitForm,
+    })
+
+    const submitJson = (await submitRes.json()) as Record<string, unknown>
+    if (!submitRes.ok) {
+      throw new Error(`Zoho Sign submit failed: ${submitRes.status} ${JSON.stringify(submitJson)}`)
+    }
+    requireZohoSuccess(submitJson, "Zoho Sign submit")
+  }
 
   const embedForm = new FormData()
   embedForm.append("host", appUrl)

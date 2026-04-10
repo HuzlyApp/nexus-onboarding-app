@@ -25,6 +25,7 @@ type Worker = {
   city?: string | null;
   state?: string | null;
   address?: string | null;
+  address1?: string | null;
   distance_meters?: number | null;
 };
 
@@ -68,7 +69,12 @@ export default function ResultsClient() {
         const res = await fetch("/api/search-workers", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ lat, lng, radius }),
+          body: JSON.stringify({
+            lat,
+            lng,
+            radius,
+            ...(place.trim() ? { place: place.trim() } : {}),
+          }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "Search failed");
@@ -81,24 +87,39 @@ export default function ResultsClient() {
       }
     }
     run();
-  }, [lat, lng, radius]);
+  }, [lat, lng, radius, place]);
 
   const filteredSorted = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const placeQ = (place || "").trim().toLowerCase();
     const base = !q
       ? workers
       : workers.filter((w) => {
           const name = `${w.first_name} ${w.last_name}`.toLowerCase();
           const role = (w.job_role || "").toLowerCase();
-          const loc = `${w.city ?? ""} ${w.state ?? ""} ${w.address ?? ""}`.toLowerCase();
+          const loc = `${w.city ?? ""} ${w.state ?? ""} ${w.address1 ?? ""} ${w.address ?? ""}`.toLowerCase();
           return name.includes(q) || role.includes(q) || loc.includes(q);
         });
-    return [...base].sort((a, b) => {
+    // Match any comma-separated segment (e.g. "Davao City" from "Davao City, Philippines")
+    const placeFiltered = !placeQ
+      ? base
+      : base.filter((w) => {
+          const loc = `${w.city ?? ""} ${w.state ?? ""} ${w.address1 ?? ""} ${w.address ?? ""}`.toLowerCase();
+          const segments = place
+            .split(",")
+            .map((s) => s.trim().toLowerCase())
+            .filter((s) => s.length >= 2);
+          return (
+            segments.some((seg) => loc.includes(seg)) ||
+            loc.includes(placeQ)
+          );
+        });
+    return [...placeFiltered].sort((a, b) => {
       const ad = typeof a.distance_meters === "number" ? a.distance_meters : Number.POSITIVE_INFINITY;
       const bd = typeof b.distance_meters === "number" ? b.distance_meters : Number.POSITIVE_INFINITY;
       return ad - bd;
     });
-  }, [workers, query]);
+  }, [workers, query, place]);
 
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden text-zinc-600">
@@ -208,9 +229,11 @@ export default function ResultsClient() {
                         </td>
                         <td className="px-4 py-4 text-sm text-zinc-600">{w.job_role}</td>
                         <td className="px-4 py-4 text-sm text-zinc-600">
-                          {w.address
-                            ? w.address
-                            : [w.city, w.state].filter(Boolean).join(", ") || "—"}
+                          {w.address1
+                            ? w.address1
+                            : w.address
+                              ? w.address
+                              : [w.city, w.state].filter(Boolean).join(", ") || "—"}
                         </td>
                         <td className="px-4 py-4 text-sm text-zinc-600">
                           {typeof w.distance_meters === "number"

@@ -126,17 +126,16 @@ export default function SummaryPage() {
         setSkillsTotal((cats ?? []).length)
       }
 
-      // Some parts of the app historically wrote assessments with worker_id = user.id; support both.
-      const { data: doneA, error: aErr } = await supabase
-        .from("skill_assessments")
-        .select("id")
-        .eq("completed", true)
-        .eq("user_id", user.id)
-      if (aErr) {
-        console.error("[step-6-summary] skill_assessments", aErr)
+      // Skill assessments can be keyed by worker_id or user_id depending on DB migration.
+      const assessRes = await fetch(
+        `/api/onboarding/skill-assessments-progress?applicantId=${encodeURIComponent(user.id)}`
+      )
+      const assessJson = (await assessRes.json().catch(() => ({}))) as { completedCount?: number; error?: string }
+      if (!assessRes.ok) {
+        console.error("[step-6-summary] skill-assessments-progress", assessJson)
         setSkillsCompleted(0)
       } else {
-        setSkillsCompleted((doneA ?? []).length)
+        setSkillsCompleted(typeof assessJson.completedCount === "number" ? assessJson.completedCount : 0)
       }
 
       // Step 4: authorization + identity docs

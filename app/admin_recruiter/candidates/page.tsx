@@ -36,6 +36,7 @@ type WorkerProfile = {
   city: string | null
   state: string | null
   created_at: string | null
+  status?: string | null
 }
 
 type Candidate = {
@@ -45,9 +46,16 @@ type Candidate = {
   email: string
   phone: string
   address: string
-  status: "New" | "Pending" | "Approved" | "Disapproved"
+  status: string
   createdAt: string | null
   reference: string
+}
+
+function titleCaseStatus(s: string | null | undefined) {
+  const v = (s || "").trim()
+  if (!v) return "New"
+  const low = v.toLowerCase()
+  return low.slice(0, 1).toUpperCase() + low.slice(1)
 }
 
 const sidebarItems = [
@@ -89,7 +97,7 @@ export default function CandidatesPage() {
           email: item.email || "",
           phone: item.phone || "",
           address: [item.address1, item.city, item.state].filter(Boolean).join(", "),
-          status: "New",
+          status: titleCaseStatus(item.status as string | undefined),
           createdAt: item.created_at,
           reference: item.id.slice(0, 7).toUpperCase(),
         }))
@@ -168,7 +176,7 @@ export default function CandidatesPage() {
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden text-zinc-700">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <div className="font-semibold text-2xl">Workers</div>
+            <div className="font-semibold text-2xl">Candidates</div>
           </div>
 
           <div className="flex items-center gap-6">
@@ -191,14 +199,21 @@ export default function CandidatesPage() {
         <div className="flex-1 p-8 overflow-auto">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-                <h1 className="text-3xl font-semibold">Workers</h1>
-                <p className="text-zinc-500">Manage workers in one place</p>
+                <h1 className="text-3xl font-semibold">Candidates</h1>
+                <p className="text-zinc-500">Manage applicants in one place</p>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
               <button className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-2xl transition">
-                  <Plus className="w-5 h-5" /> Create Worker
+                  <Plus className="w-5 h-5" /> Create Candidate
               </button>
+
+              <Link
+                href="/admin_recruiter/advanced-search"
+                className="inline-flex items-center gap-2 border border-teal-600 text-teal-700 hover:bg-teal-50 px-6 py-3 rounded-2xl transition"
+              >
+                <MapPin className="w-5 h-5" /> Open advanced search
+              </Link>
 
               <div className="flex items-center bg-white border border-zinc-200 rounded-2xl px-5 py-3">
                 <Search className="w-5 h-5 text-zinc-400 mr-3" />
@@ -228,7 +243,7 @@ export default function CandidatesPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-zinc-400">Type</span>
                   <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
-                    Workers
+                    Candidates
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -300,10 +315,10 @@ export default function CandidatesPage() {
             }
 
             if (loading) {
-              return <div className="text-center py-20 text-zinc-500">Loading workers...</div>
+              return <div className="text-center py-20 text-zinc-500">Loading candidates...</div>
             }
             if (filtered.length === 0) {
-              return <div className="text-center py-20 text-zinc-500">No workers found.</div>
+              return <div className="text-center py-20 text-zinc-500">No candidates found.</div>
             }
 
             if (view === "list") {

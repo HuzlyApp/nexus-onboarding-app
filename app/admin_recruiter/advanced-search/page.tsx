@@ -111,6 +111,7 @@ export default function AdvancedSearchPage() {
           lat: center[1],
           lng: center[0],
           radius: radiusMiles,
+          ...(placeLabel.trim() ? { place: placeLabel.trim() } : {}),
         }),
       })
 
