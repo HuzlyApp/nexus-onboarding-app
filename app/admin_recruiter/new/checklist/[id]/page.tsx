@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import {
   Briefcase,
   Calendar,
@@ -17,17 +17,48 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
-type WorkerProfile = {
+type ItemState = "pending" | "complete" | "uploaded" | "answered" | "warning" | "not_reachable" | "not_applicable";
+
+type ChecklistRow = {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
-  job_role: string | null;
-  created_at: string | null;
-  address1: string | null;
-  city: string | null;
-  state: string | null;
+  title: string;
+  subtitle?: string;
+  state: ItemState;
+  optional?: boolean;
+  checked?: boolean;
+  detailLine?: string;
+  badge?: string;
+};
+
+type ChecklistSection = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  rows: ChecklistRow[];
+};
+
+type ChecklistPayload = {
+  worker: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    job_role: string | null;
+    city: string | null;
+    state: string | null;
+    created_at: string | null;
+    status_label: string;
+  };
+  meta: {
+    daysInStage: number;
+    progressPercent: number;
+    completedItems: number;
+    totalItems: number;
+    verifiedDocuments: { done: number; total: number };
+    skillAssessments: { completed: number; total: number };
+  };
+  tracker: { labels: string[]; done: boolean[] };
+  sections: ChecklistSection[];
 };
 
 function initials(name: string) {
@@ -38,52 +69,80 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
+function badgeClasses(state: ItemState): string {
+  switch (state) {
+    case "uploaded":
+    case "complete":
+    case "answered":
+      return "bg-emerald-50 text-emerald-800 border-emerald-100";
+    case "warning":
+      return "bg-amber-50 text-amber-900 border-amber-100";
+    case "not_reachable":
+      return "bg-red-50 text-red-800 border-red-100";
+    case "not_applicable":
+      return "bg-slate-50 text-slate-600 border-slate-100";
+    default:
+      return "bg-amber-50 text-amber-800 border-amber-100";
+  }
+}
+
+function RowBadge({ text, state }: { text: string; state: ItemState }) {
+  return (
+    <span
+      className={`text-[11px] px-3 py-1 rounded-full font-medium border ${badgeClasses(state)}`}
+    >
+      {text}
+    </span>
+  );
+}
+
 export default function NewApplicantChecklistPage() {
   const pathname = usePathname();
   const params = useParams<{ id: string }>();
   const applicantId = params?.id;
 
   const isWorkerRoute = pathname?.startsWith("/admin_recruiter/workers/") ?? false;
+  const basePrefix = isWorkerRoute
+    ? `/admin_recruiter/workers/${applicantId}`
+    : `/admin_recruiter/new`;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<ChecklistPayload | null>(null);
 
   useEffect(() => {
-    async function fetchApplicant() {
+    async function run() {
       if (!applicantId) return;
       setLoading(true);
+      setError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role, created_at, address1, city, state")
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(`/api/admin/worker-checklist?workerId=${encodeURIComponent(applicantId)}`);
+        const json = (await res.json()) as ChecklistPayload & { error?: string };
+        if (!res.ok) throw new Error(json.error || "Failed to load checklist");
+        setData(json);
       } catch (e) {
-        console.error("Failed to fetch applicant for checklist:", e);
-        setApplicant(null);
+        console.error(e);
+        setError(e instanceof Error ? e.message : "Failed to load");
+        setData(null);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchApplicant();
+    run();
   }, [applicantId]);
 
   const candidateName = useMemo(() => {
-    const n = `${applicant?.first_name ?? ""} ${applicant?.last_name ?? ""}`.trim();
+    const w = data?.worker;
+    const n = `${w?.first_name ?? ""} ${w?.last_name ?? ""}`.trim();
     return n || "Applicant";
-  }, [applicant]);
+  }, [data?.worker]);
 
-  const candidateRole = applicant?.job_role || "N/A";
+  const candidateRole = data?.worker?.job_role || "N/A";
   const candidateLocation = useMemo(() => {
-    const parts = [applicant?.city ?? "", applicant?.state ?? ""].filter(Boolean);
+    const parts = [data?.worker?.city ?? "", data?.worker?.state ?? ""].filter(Boolean);
     return parts.length ? parts.join(", ") : "—";
-  }, [applicant?.city, applicant?.state]);
+  }, [data?.worker?.city, data?.worker?.state]);
 
   const tabKeys = [
     "Checklist",
@@ -96,9 +155,31 @@ export default function NewApplicantChecklistPage() {
     "History",
   ] as const;
 
+  const tabHref = (key: (typeof tabKeys)[number]) => {
+    switch (key) {
+      case "Checklist":
+        return `${basePrefix}/checklist`;
+      case "Profile":
+        return `${basePrefix}/profile`;
+      case "Attachments":
+        return `/admin_recruiter/new/attachments/${applicantId}`;
+      case "Skill Assessments":
+        return `/admin_recruiter/new/skill-assessments/${applicantId}`;
+      case "Authorization":
+        return `/admin_recruiter/new/authorization/${applicantId}`;
+      case "Activities":
+        return `/admin_recruiter/new/activities/${applicantId}`;
+      case "Facility Assignments":
+        return `/admin_recruiter/new/facility-assignments/${applicantId}`;
+      case "History":
+        return `/admin_recruiter/new/history/${applicantId}`;
+      default:
+        return "#";
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0A1F1C] text-white transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -119,16 +200,10 @@ export default function NewApplicantChecklistPage() {
             <div className="px-4 text-xs uppercase tracking-widest text-teal-400/70 mb-4">
               PERSONAL SETTINGS
             </div>
-            <a
-              href="#"
-              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl"
-            >
+            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl">
               Profile
             </a>
-            <a
-              href="#"
-              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl"
-            >
+            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl">
               Account
             </a>
 
@@ -162,10 +237,7 @@ export default function NewApplicantChecklistPage() {
             })}
 
             <div className="px-4 pt-10">
-              <a
-                href="#"
-                className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl"
-              >
+              <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl">
                 <Settings className="w-5 h-5" /> Settings
               </a>
             </div>
@@ -179,7 +251,6 @@ export default function NewApplicantChecklistPage() {
         </div>
       </div>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
@@ -226,8 +297,13 @@ export default function NewApplicantChecklistPage() {
               Admin - {isWorkerRoute ? "Worker" : "New Applicant"} Detailed Page - Checklist
             </div>
 
+            {error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {error}
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
-              {/* Top */}
               <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-teal-600 text-white flex items-center justify-center font-semibold text-sm">
@@ -239,26 +315,33 @@ export default function NewApplicantChecklistPage() {
                     </div>
                     <div className="text-xs text-zinc-500">{candidateRole}</div>
                     <div className="text-xs text-zinc-400">{candidateLocation}</div>
+                    {data?.worker?.status_label ? (
+                      <div className="mt-1 text-[11px] font-medium text-teal-800">{data.worker.status_label}</div>
+                    ) : null}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <div className="text-right hidden sm:block">
                     <div className="text-xs text-zinc-500">Days in current stage</div>
-                    <div className="text-sm font-semibold text-zinc-800">2 days</div>
+                    <div className="text-sm font-semibold text-zinc-800">
+                      {data?.meta?.daysInStage ?? "—"}
+                      {data?.meta ? " days" : ""}
+                    </div>
                   </div>
 
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button
+                    type="button"
+                    className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm"
+                  >
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
                 </div>
               </div>
 
-              {/* Body */}
               <div className="p-6 grid grid-cols-12 gap-6">
-                {/* Left column */}
-                <aside className="col-span-3 space-y-4">
+                <aside className="col-span-12 lg:col-span-3 space-y-4">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-semibold text-zinc-900">Progress Checklist Tracker</div>
@@ -268,217 +351,133 @@ export default function NewApplicantChecklistPage() {
                     </div>
 
                     <div className="flex items-baseline justify-between mb-3">
-                      <div className="text-2xl font-semibold text-zinc-900">3</div>
-                      <div className="text-xs text-zinc-500">of 5 items</div>
+                      <div className="text-2xl font-semibold text-zinc-900">
+                        {data?.meta?.completedItems ?? "—"}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {data?.meta ? `of ${data.meta.totalItems} items` : ""}
+                      </div>
                     </div>
 
                     <div className="h-2 rounded-full bg-zinc-200 overflow-hidden mb-4">
-                      <div className="h-full w-[60%] bg-teal-600 rounded-full" />
+                      <div
+                        className="h-full bg-teal-600 rounded-full transition-all"
+                        style={{ width: `${data?.meta?.progressPercent ?? 0}%` }}
+                      />
+                    </div>
+
+                    <div className="text-[11px] text-zinc-500 mb-2">
+                      Documents {data?.meta?.verifiedDocuments.done ?? 0}/
+                      {data?.meta?.verifiedDocuments.total ?? 4} · Quizzes {data?.meta?.skillAssessments.completed ?? 0}/
+                      {data?.meta?.skillAssessments.total ?? 0}
                     </div>
 
                     <div className="space-y-2">
-                      {[
-                        "Claimed & Assigned Facilities",
-                        "Facility Assigned",
-                        "Assign Rate",
-                        "Verified Documents",
-                        "Initial Screening",
-                      ].map((label, idx) => {
-                        const done = idx < 3;
+                      {(data?.tracker.labels ?? []).map((label, idx) => {
+                        const done = data?.tracker.done[idx];
                         return (
                           <div key={label} className="flex items-center gap-2 text-xs">
                             {done ? (
-                              <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                              <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
                             ) : (
-                              <div className="w-4 h-4 border border-zinc-300 rounded-full" />
+                              <div className="w-4 h-4 border border-zinc-300 rounded-full shrink-0" />
                             )}
-                            <span className={done ? "text-zinc-800" : "text-zinc-500"}>
-                              {label}
-                            </span>
+                            <span className={done ? "text-zinc-800" : "text-zinc-500"}>{label}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
-
-                  <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-4">
-                    <div className="text-sm font-semibold text-zinc-900 mb-2">
-                      Current Checklist Status
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-teal-600 rounded-full" />
-                      <span className="text-xs text-zinc-600">Pending items updated by manager</span>
-                    </div>
-                  </div>
                 </aside>
 
-                {/* Main column */}
-                <main className="col-span-9 space-y-4">
-                  {/* Tabs */}
+                <main className="col-span-12 lg:col-span-9 space-y-4">
                   <div className="flex flex-wrap gap-2">
-                  {tabKeys.map((key) => {
-                    const href =
-                      key === "Checklist"
-                        ? `/admin_recruiter/workers/${applicantId}/checklist`
-                        : key === "Profile"
-                          ? `/admin_recruiter/workers/${applicantId}/profile`
-                          : key === "Attachments"
-                            ? `/admin_recruiter/new/attachments/${applicantId}`
-                            : key === "Skill Assessments"
-                              ? `/admin_recruiter/new/skill-assessments/${applicantId}`
-                              : key === "Authorization"
-                                ? `/admin_recruiter/new/authorization/${applicantId}`
-                                : key === "Facility Assignments"
-                                  ? `/admin_recruiter/new/facility-assignments/${applicantId}`
-                                  : key === "History"
-                                    ? `/admin_recruiter/new/history/${applicantId}`
-                                    : "#";
-                    const isActive = key === "Checklist";
-                    return (
-                      <Link
-                        key={key}
-                        href={href}
-                        className={`text-xs px-3 py-1.5 rounded-xl border transition ${
-                          isActive
-                            ? "border-[#7AA6FF] bg-white text-zinc-900"
-                            : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
-                        }`}
-                      >
-                        {key}
-                      </Link>
-                    );
-                  })}
+                    {tabKeys.map((key) => {
+                      const href = tabHref(key);
+                      const isActive = key === "Checklist";
+                      return (
+                        <Link
+                          key={key}
+                          href={href}
+                          className={`text-xs px-3 py-1.5 rounded-xl border transition ${
+                            isActive
+                              ? "border-[#7AA6FF] bg-white text-zinc-900"
+                              : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+                          }`}
+                        >
+                          {key}
+                        </Link>
+                      );
+                    })}
                   </div>
 
-                  {/* Checklist content */}
-                  <div className="grid grid-cols-2 gap-6">
-                    {/* Facility Specific Requirements */}
-                    <div className="bg-white/70 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="text-sm font-semibold text-zinc-900">
-                            1. Facility Specific Requirements
-                          </div>
-                          <div className="text-xs text-zinc-500">Complete the facility workflow</div>
-                        </div>
-                        <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium">
-                          Pending
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {[
-                          {
-                            n: "1.1",
-                            title: "Facility Assigned",
-                            items: ["Facility Assigned", "Assign Rate"],
-                          },
-                          {
-                            n: "1.2",
-                            title: "Verified Documents",
-                            items: ["Nursing License", "TB Test", "CPR Certification"],
-                          },
-                        ].map((s) => (
-                          <div key={s.n} className="rounded-xl border border-zinc-200/70 bg-white/60 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-xs text-zinc-500">Step {s.n}</div>
-                                <div className="text-sm font-medium text-zinc-900">{s.title}</div>
-                              </div>
-                              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
-                                Pending
-                              </span>
+                  {loading ? (
+                    <div className="text-center py-16 text-zinc-500">Loading checklist…</div>
+                  ) : (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      {(data?.sections ?? []).map((section) => (
+                        <div
+                          key={section.id}
+                          className="bg-white/70 border border-[#9CC3FF]/30 rounded-2xl p-5"
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-4">
+                            <div>
+                              <div className="text-sm font-semibold text-zinc-900">{section.title}</div>
+                              {section.subtitle ? (
+                                <div className="text-xs text-zinc-500 mt-0.5">{section.subtitle}</div>
+                              ) : null}
                             </div>
+                          </div>
 
-                            <div className="mt-3 space-y-2">
-                              {s.items.map((it) => (
-                                <div key={it} className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2 text-zinc-600">
-                                    <div className="w-3.5 h-3.5 rounded-sm border border-zinc-300 bg-white" />
-                                    {it}
+                          <div className="space-y-3">
+                            {section.rows.map((row) => (
+                              <div
+                                key={row.id}
+                                className="rounded-xl border border-zinc-200/70 bg-white/60 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-zinc-900">{row.title}</div>
+                                    {row.subtitle ? (
+                                      <div className="text-xs text-zinc-500 mt-0.5">{row.subtitle}</div>
+                                    ) : null}
                                   </div>
-                                  <span className="text-[11px] text-zinc-400">Pending</span>
+                                  <RowBadge text={row.badge ?? "Pending"} state={row.state} />
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
 
-                    {/* Final onboarding steps */}
-                    <div className="bg-white/70 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="text-sm font-semibold text-zinc-900">
-                            2. Final Onboarding Steps
-                          </div>
-                          <div className="text-xs text-zinc-500">Complete onboarding for start date</div>
-                        </div>
-                        <span className="text-[11px] px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-100 font-medium">
-                          Pending
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {[
-                          {
-                            n: "2.1",
-                            title: "Welcome Email Sent",
-                            items: ["Send welcome email", "Confirm docs"],
-                          },
-                          {
-                            n: "2.2",
-                            title: "Badge & Setup",
-                            items: ["Badge sent", "Facility setup checklist"],
-                          },
-                          {
-                            n: "2.3",
-                            title: "401k / Affiliation",
-                            items: ["Enroll in 401k", "Verify plan"],
-                          },
-                          {
-                            n: "2.4",
-                            title: "Final Onboarding Call",
-                            items: ["Schedule call", "Confirm availability"],
-                          },
-                        ].map((s) => (
-                          <div key={s.n} className="rounded-xl border border-zinc-200/70 bg-white/60 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-xs text-zinc-500">Step {s.n}</div>
-                                <div className="text-sm font-medium text-zinc-900">{s.title}</div>
-                              </div>
-                              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
-                                Pending
-                              </span>
-                            </div>
-
-                            <div className="mt-3 space-y-2">
-                              {s.items.map((it) => (
-                                <div key={it} className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2 text-zinc-600">
-                                    <div className="w-3.5 h-3.5 rounded-sm border border-zinc-300 bg-white" />
-                                    {it}
+                                {typeof row.checked === "boolean" ? (
+                                  <div className="mt-3 flex items-center gap-2 text-xs text-zinc-600">
+                                    <div
+                                      className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+                                        row.checked
+                                          ? "border-teal-600 bg-teal-600"
+                                          : "border-zinc-300 bg-white"
+                                      }`}
+                                    >
+                                      {row.checked ? (
+                                        <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                                      ) : null}
+                                    </div>
+                                    <span>{row.checked ? "On file" : "Missing"}</span>
                                   </div>
-                                  <span className="text-[11px] text-zinc-400">Pending</span>
-                                </div>
-                              ))}
-                            </div>
+                                ) : null}
+
+                                {row.detailLine ? (
+                                  <div className="mt-2 text-[11px] text-zinc-400">{row.detailLine}</div>
+                                ) : null}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </main>
               </div>
             </div>
-
-            {/* Other tabs can be implemented later. */}
           </div>
         </div>
       </div>
     </div>
   );
 }
-

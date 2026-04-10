@@ -17,19 +17,47 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
-type WorkerProfile = {
+type OnboardingStep = {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
-  job_role: string | null;
-  created_at: string | null;
-  address1: string | null;
-  city: string | null;
-  state: string | null;
-  email: string | null;
-  phone: string | null;
+  label: string;
+  state: "complete" | "in_progress" | "pending";
+  detail?: string;
+};
+
+type ProfilePayload = {
+  worker: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    phone: string | null;
+    address1: string | null;
+    address2: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    job_role: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    status: string;
+    status_label: string;
+    date_of_birth: string | null;
+    years_experience: number | null;
+    hourly_rate: string | null;
+    ssn_last_four: string | null;
+  };
+  documents: {
+    updated_at: string | null;
+    nursing_license_url: boolean;
+    tb_test_url: boolean;
+    cpr_certification_url: boolean;
+    identity_uploaded: boolean;
+  } | null;
+  references: Array<{ id: string; name: string; phone: string | null; email: string | null }>;
+  skillAssessments: { completed: number; total: number };
+  onboardingSteps: OnboardingStep[];
+  activity: { source: string; created_at: string | null; updated_at: string | null };
 };
 
 function initials(name: string) {
@@ -40,57 +68,79 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
+function formatDate(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+function formatRelative(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const diff = Date.now() - d.getTime();
+  const days = Math.floor(diff / 86_400_000);
+  if (days < 1) return "Today";
+  if (days === 1) return "1 day ago";
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
+  return `${Math.floor(days / 30)} months ago`;
+}
+
+function stepDotClass(state: OnboardingStep["state"]) {
+  if (state === "complete") return "bg-teal-600";
+  if (state === "in_progress") return "bg-amber-500";
+  return "bg-zinc-300";
+}
+
 export default function NewApplicantProfilePage() {
   const pathname = usePathname();
   const params = useParams<{ id: string }>();
   const applicantId = params?.id;
 
   const isWorkerRoute = pathname?.startsWith("/admin_recruiter/workers/") ?? false;
+  const base = "/admin_recruiter/new";
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<ProfilePayload | null>(null);
 
   useEffect(() => {
-    async function fetchApplicant() {
+    async function run() {
       if (!applicantId) return;
       setLoading(true);
+      setError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select(
-            "id, first_name, last_name, job_role, created_at, address1, city, state, email, phone"
-          )
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(
+          `/api/admin/worker-profile?workerId=${encodeURIComponent(applicantId)}`
+        );
+        const json = (await res.json()) as ProfilePayload & { error?: string };
+        if (!res.ok) throw new Error(json.error || "Failed to load profile");
+        setData(json);
       } catch (e) {
-        console.error("Failed to fetch applicant profile:", e);
-        setApplicant(null);
+        console.error(e);
+        setError(e instanceof Error ? e.message : "Failed to load");
+        setData(null);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchApplicant();
+    run();
   }, [applicantId]);
 
+  const w = data?.worker;
   const candidateName = useMemo(() => {
-    const n = `${applicant?.first_name ?? ""} ${applicant?.last_name ?? ""}`.trim();
+    const n = `${w?.first_name ?? ""} ${w?.last_name ?? ""}`.trim();
     return n || "Applicant";
-  }, [applicant]);
+  }, [w?.first_name, w?.last_name]);
 
-  const candidateRole = applicant?.job_role || "N/A";
+  const candidateRole = w?.job_role || "N/A";
   const candidateLocation = useMemo(() => {
-    const parts = [applicant?.city ?? "", applicant?.state ?? ""].filter(Boolean);
+    const parts = [w?.city ?? "", w?.state ?? "", w?.zip ?? ""].filter(Boolean);
     return parts.length ? parts.join(", ") : "—";
-  }, [applicant?.city, applicant?.state]);
-
-  const candidateEmail = applicant?.email ?? "—";
-  const candidatePhone = applicant?.phone ?? "—";
+  }, [w?.city, w?.state, w?.zip]);
 
   const tabLink = (label: string, href: string, active?: boolean) => (
     <Link
@@ -105,9 +155,10 @@ export default function NewApplicantProfilePage() {
     </Link>
   );
 
+  const id = applicantId ?? "";
+
   return (
     <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0A1F1C] text-white transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -188,7 +239,6 @@ export default function NewApplicantProfilePage() {
         </div>
       </div>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
@@ -224,20 +274,25 @@ export default function NewApplicantProfilePage() {
               Admin - {isWorkerRoute ? "Worker" : "New Applicant"} Detailed Page - Details
             </div>
 
+            {error ? (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {error}
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
-              {/* Top */}
               <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-teal-600 text-white flex items-center justify-center font-semibold text-sm">
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <div className="text-lg font-semibold text-zinc-900">
                         {loading ? "Loading..." : candidateName}
                       </div>
                       <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
-                        {isWorkerRoute ? "Worker" : "New Applicant"}
+                        {w?.status_label ?? "—"}
                       </span>
                     </div>
                     <div className="text-xs text-zinc-500">{candidateRole}</div>
@@ -246,64 +301,45 @@ export default function NewApplicantProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button
+                    type="button"
+                    className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm"
+                  >
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
                 </div>
               </div>
 
-              {/* Tabs */}
               <div className="px-6 py-4 border-b border-[#9CC3FF]/20 bg-white/30">
                 <div className="flex flex-wrap gap-2">
-                  {tabLink("Checklist", `/admin_recruiter/workers/${applicantId}/checklist`, false)}
-                  {tabLink("Profile", `/admin_recruiter/workers/${applicantId}/profile`, true)}
-                  {tabLink("Attachments", `/admin_recruiter/new/attachments/${applicantId}`, false)}
-                  {tabLink(
-                    "Skill Assessments",
-                    `/admin_recruiter/new/skill-assessments/${applicantId}`,
-                    false
-                  )}
-                  {tabLink("Authorization", `/admin_recruiter/new/authorization/${applicantId}`, false)}
-                  {tabLink("Activities", `/admin_recruiter/new/activities/${applicantId}`, false)}
-                  {tabLink(
-                    "Facility Assignments",
-                    `/admin_recruiter/new/facility-assignments/${applicantId}`,
-                    false
-                  )}
-                  {tabLink("History", `/admin_recruiter/new/history/${applicantId}`, false)}
+                  {tabLink("Checklist", `${base}/checklist/${id}`, false)}
+                  {tabLink("Profile", `${base}/profile/${id}`, true)}
+                  {tabLink("Attachments", `${base}/attachments/${id}`, false)}
+                  {tabLink("Skill Assessments", `${base}/skill-assessments/${id}`, false)}
+                  {tabLink("Authorization", `${base}/authorization/${id}`, false)}
+                  {tabLink("Activities", `${base}/activities/${id}`, false)}
+                  {tabLink("Facility Assignments", `${base}/facility-assignments/${id}`, false)}
+                  {tabLink("History", `${base}/history/${id}`, false)}
                 </div>
               </div>
 
-              {/* Profile subtabs */}
               <div className="px-6 py-4">
                 <div className="inline-flex items-center gap-2 bg-white/70 border border-zinc-200 rounded-3xl p-1">
                   <Link
-                    href={
-                      isWorkerRoute
-                        ? `/admin_recruiter/workers/${applicantId}/profile`
-                        : `/admin_recruiter/new/profile/${applicantId}`
-                    }
+                    href={`${base}/profile/${id}`}
                     className="text-xs px-4 py-2 rounded-2xl bg-teal-700 text-white"
                   >
                     Details
                   </Link>
                   <Link
-                    href={
-                      isWorkerRoute
-                        ? `/admin_recruiter/workers/${applicantId}/profile/resume`
-                        : `/admin_recruiter/new/profile/resume/${applicantId}`
-                    }
+                    href={`${base}/profile/resume/${id}`}
                     className="text-xs px-4 py-2 rounded-2xl text-zinc-600 hover:bg-white/60"
                   >
                     Resume
                   </Link>
                   <Link
-                    href={
-                      isWorkerRoute
-                        ? `/admin_recruiter/workers/${applicantId}/profile/notes`
-                        : `/admin_recruiter/new/profile/notes/${applicantId}`
-                    }
+                    href={`${base}/profile/notes/${id}`}
                     className="text-xs px-4 py-2 rounded-2xl text-zinc-600 hover:bg-white/60"
                   >
                     Notes
@@ -311,23 +347,89 @@ export default function NewApplicantProfilePage() {
                 </div>
               </div>
 
-              {/* Body */}
               <div className="p-6 grid grid-cols-12 gap-6">
-                {/* Left */}
-                <section className="col-span-4 space-y-6">
+                <section className="col-span-12 lg:col-span-4 space-y-6">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="text-sm font-semibold text-zinc-900 mb-4">Candidate Details</div>
 
                     <div className="grid grid-cols-2 gap-4 text-xs">
-                      {[
-                        ["First Name", applicant?.first_name ?? "—"],
-                        ["Last Name", applicant?.last_name ?? "—"],
-                        ["Email Address", candidateEmail],
-                        ["Phone Number", candidatePhone],
-                        ["Address", applicant?.address1 ?? "—"],
-                        ["City", applicant?.city ?? "—"],
-                        ["State", applicant?.state ?? "—"],
-                      ].map(([k, v]) => (
+                      {(
+                        [
+                          ["First Name", w?.first_name ?? "—"],
+                          ["Last Name", w?.last_name ?? "—"],
+                          ["Date of Birth", w?.date_of_birth ? formatDate(w.date_of_birth) : "—"],
+                          ["Email Address", w?.email ?? "—"],
+                          [
+                            "Years of experience",
+                            w?.years_experience != null ? `${w.years_experience} yrs` : "—",
+                          ],
+                          ["Street address", w?.address1 ?? "—"],
+                          ["City", w?.city ?? "—"],
+                          ["State", w?.state ?? "—"],
+                          ["Zip Code", w?.zip ?? "—"],
+                          ["Phone Number", w?.phone ?? "—"],
+                          ["Last four of SSN", w?.ssn_last_four ?? "—"],
+                          ["Hourly rate", w?.hourly_rate ? `$${w.hourly_rate}/hr` : "—"],
+                        ] as const
+                      ).map(([k, v]) => (
+                        <div key={k} className="col-span-2 grid grid-cols-2 gap-3">
+                          <div className="text-zinc-400">{k}</div>
+                          <div className="text-zinc-700 break-all">{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-sm font-semibold text-zinc-900">References</div>
+                    </div>
+                    {data && data.references.length > 0 ? (
+                      <div className="space-y-3">
+                        {data.references.map((r, i) => (
+                          <div
+                            key={r.id}
+                            className="rounded-xl border border-zinc-200/70 bg-white/60 p-3 text-xs"
+                          >
+                            <div className="font-medium text-zinc-800">
+                              Reference {i + 1}: {r.name}
+                            </div>
+                            <div className="text-zinc-500 mt-1">{r.phone ?? "—"}</div>
+                            <div className="text-zinc-500">{r.email ?? "—"}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-zinc-500">No references on file yet.</div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-sm font-semibold text-zinc-900">License &amp; documents</div>
+                    </div>
+                    {data?.documents?.nursing_license_url ? (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 text-xs text-zinc-700">
+                        Nursing license document on file. TB / CPR / ID flags:{" "}
+                        {[data.documents.tb_test_url && "TB", data.documents.cpr_certification_url && "CPR", data.documents.identity_uploaded && "ID"]
+                          .filter(Boolean)
+                          .join(", ") || "—"}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-zinc-500">No nursing license document uploaded yet.</div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
+                    <div className="text-sm font-semibold text-zinc-900 mb-4">Activity</div>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      {(
+                        [
+                          ["Source", data?.activity.source ?? "—"],
+                          ["Created", formatDate(data?.activity.created_at)],
+                          ["Last updated", formatRelative(data?.activity.updated_at)],
+                        ] as const
+                      ).map(([k, v]) => (
                         <div key={k} className="col-span-2 grid grid-cols-2 gap-3">
                           <div className="text-zinc-400">{k}</div>
                           <div className="text-zinc-700">{v}</div>
@@ -337,122 +439,127 @@ export default function NewApplicantProfilePage() {
                   </div>
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="text-sm font-semibold text-zinc-900">Nursing Licenses</div>
-                      <button className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                        + Add Nursing License
-                      </button>
-                    </div>
-
-                    <div className="text-xs text-zinc-500">No licenses added yet.</div>
-                  </div>
-
-                  <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="text-sm font-semibold text-zinc-900 mb-4">Activity History</div>
                     <div className="space-y-3">
-                      {[
-                        { t: "Nexus Med Pro updated the candidate", ago: "1 week ago" },
-                        { t: "Nexus Med Pro updated the candidate", ago: "2 weeks ago" },
-                      ].map((h, idx) => (
-                        <div key={idx} className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-teal-600/10 flex items-center justify-center">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-teal-600/10 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-4 h-4 text-teal-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs text-zinc-700">
+                            Record created for {candidateName}
+                          </div>
+                          <div className="text-[11px] text-zinc-400">
+                            {formatRelative(data?.activity.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                      {data?.activity.updated_at &&
+                      data.activity.updated_at !== data.activity.created_at ? (
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-teal-600/10 flex items-center justify-center shrink-0">
                             <CheckCircle2 className="w-4 h-4 text-teal-700" />
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs text-zinc-700">{h.t}</div>
-                            <div className="text-[11px] text-zinc-400">{h.ago}</div>
+                            <div className="text-xs text-zinc-700">Profile last updated</div>
+                            <div className="text-[11px] text-zinc-400">
+                              {formatRelative(data.activity.updated_at)}
+                            </div>
                           </div>
                         </div>
-                      ))}
+                      ) : null}
                     </div>
                   </div>
                 </section>
 
-                {/* Right */}
-                <section className="col-span-8 space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                <section className="col-span-12 lg:col-span-8 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                       <div className="text-sm font-semibold text-zinc-900 mb-2">Education</div>
-                      <div className="text-xs text-zinc-500">Status</div>
+                      <div className="text-xs text-zinc-500">From resume (not stored on worker yet)</div>
                       <div className="mt-2 text-xs text-zinc-700">—</div>
                     </div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                       <div className="text-sm font-semibold text-zinc-900 mb-2">Experience</div>
-                      <div className="text-xs text-zinc-500">Source</div>
+                      <div className="text-xs text-zinc-500">Job role</div>
                       <div className="mt-2 text-xs text-zinc-700">{candidateRole}</div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="text-sm font-semibold text-zinc-900">Skills</div>
-                        <button className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                          + Add
-                        </button>
+                      <div className="text-sm font-semibold text-zinc-900 mb-2">Skills</div>
+                      <div className="text-xs text-zinc-500">
+                        Structured skills will appear when stored with the applicant profile.
                       </div>
-                      <div className="text-xs text-zinc-500">No skills added yet.</div>
+                      <div className="mt-2 text-xs text-zinc-700">—</div>
                     </div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="text-sm font-semibold text-zinc-900">Facilities Assigned</div>
-                        <button className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                          + Add
-                        </button>
-                      </div>
-                      <div className="text-xs text-zinc-500">No facilities assigned yet.</div>
+                      <div className="text-sm font-semibold text-zinc-900 mb-2">Facilities assigned</div>
+                      <div className="text-xs text-zinc-500">No facility assignments in database yet.</div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                       <div className="flex items-center justify-between mb-4">
                         <div className="text-sm font-semibold text-zinc-900">Onboarding Progress</div>
-                        <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-medium">
+                        <span className="text-[11px] px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
                           In Progress
                         </span>
                       </div>
 
                       <div className="space-y-3 text-xs text-zinc-700">
-                        <div className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full bg-teal-600" />
-                          Claimed & Assigned
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                          Skill Assessment
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-                          Authorization & Documents
-                        </div>
+                        {(data?.onboardingSteps ?? []).map((s) => (
+                          <div key={s.id} className="flex items-center gap-3">
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${stepDotClass(s.state)}`} />
+                            <span className="flex-1">{s.label}</span>
+                            {s.detail ? (
+                              <span className="text-[11px] text-zinc-400">{s.detail}</span>
+                            ) : null}
+                          </div>
+                        ))}
+                        {loading ? (
+                          <div className="text-zinc-400">Loading progress…</div>
+                        ) : null}
                       </div>
                     </div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="text-sm font-semibold text-zinc-900 mb-3">Remarks</div>
-                      <div className="text-xs text-zinc-500 mb-4">For any comments or notes</div>
-                      <div className="flex flex-wrap gap-2">
-                        <button className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition">
-                          Approved for work
-                        </button>
-                        <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                          Disapprove
-                        </button>
+                      <div className="text-sm font-semibold text-zinc-900 mb-3">Skill assessments</div>
+                      <div className="text-xs text-zinc-600">
+                        Completed {data?.skillAssessments.completed ?? 0} of {data?.skillAssessments.total ?? 0}{" "}
+                        tracked quizzes.
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
+                    <div className="text-sm font-semibold text-zinc-900 mb-3">Remarks</div>
+                    <div className="text-xs text-zinc-500 mb-4">Use pipeline actions from the New / Pending lists to approve or move applicants.</div>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href="/admin_recruiter/new"
+                        className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition inline-block text-center"
+                      >
+                        Back to New list
+                      </Link>
                     </div>
                   </div>
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-semibold text-zinc-900">Notes</div>
-                      <button className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                        + Add
-                      </button>
+                      <Link
+                        href={`${base}/profile/notes/${id}`}
+                        className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 bg-white/70 hover:bg-white transition"
+                      >
+                        Open notes
+                      </Link>
                     </div>
-                    <div className="text-xs text-zinc-500">No notes added yet.</div>
+                    <div className="text-xs text-zinc-500">Use the Notes tab for free-form recruiter notes.</div>
                   </div>
                 </section>
               </div>
@@ -463,4 +570,3 @@ export default function NewApplicantProfilePage() {
     </div>
   );
 }
-

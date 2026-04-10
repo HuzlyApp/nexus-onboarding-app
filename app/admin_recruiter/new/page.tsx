@@ -87,6 +87,7 @@ export default function NewCandidatesPage() {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [rows, setRows] = useState<CandidateRow[]>([]);
   const [query, setQuery] = useState("");
 
@@ -123,42 +124,44 @@ export default function NewCandidatesPage() {
   const [draftOrder, setDraftOrder] = useState<ColumnKey[]>(columnsOrder);
   const [draftVisible, setDraftVisible] = useState<Record<ColumnKey, boolean>>(columnsVisible);
 
-  useEffect(() => {
-    async function fetchNew() {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/workers?status=new");
-        const json = (await res.json().catch(() => ({}))) as {
-          workers?: WorkerProfile[];
-          error?: string;
+  async function loadNewApplicants() {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const res = await fetch("/api/workers?status=new", { cache: "no-store" });
+      const json = (await res.json().catch(() => ({}))) as {
+        workers?: WorkerProfile[];
+        error?: string;
+      };
+      if (!res.ok) throw new Error(json.error || "Failed to load workers");
+      const data = Array.isArray(json.workers) ? json.workers : [];
+
+      const mapped: CandidateRow[] = (data ?? []).map((p) => {
+        const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "Unnamed";
+        const location = [p.city, p.state].filter(Boolean).join(", ") || "—";
+        return {
+          id: p.id,
+          name,
+          role: p.job_role || "N/A",
+          createdAt: p.created_at,
+          location,
+          reference: p.id.slice(0, 6).toUpperCase(),
+          status: titleCaseStatus(p.status ?? "new"),
         };
-        if (!res.ok) throw new Error(json.error || "Failed to load workers");
-        const data = Array.isArray(json.workers) ? json.workers : [];
+      });
 
-        const mapped: CandidateRow[] = (data ?? []).map((p) => {
-          const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "Unnamed";
-          const location = [p.city, p.state].filter(Boolean).join(", ") || "—";
-          return {
-            id: p.id,
-            name,
-            role: p.job_role || "N/A",
-            createdAt: p.created_at,
-            location,
-            reference: p.id.slice(0, 6).toUpperCase(),
-            status: titleCaseStatus(p.status ?? "new"),
-          };
-        });
-
-        setRows(mapped);
-      } catch (e) {
-        console.error("Failed to fetch new candidates:", e);
-        setRows([]);
-      } finally {
-        setLoading(false);
-      }
+      setRows(mapped);
+    } catch (e) {
+      console.error("Failed to fetch new candidates:", e);
+      setFetchError(e instanceof Error ? e.message : "Failed to load applicants");
+      setRows([]);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    fetchNew();
+  useEffect(() => {
+    void loadNewApplicants();
   }, []);
 
   const filtered = useMemo(() => {
@@ -308,7 +311,11 @@ export default function NewCandidatesPage() {
                 <Filter className="w-5 h-5" /> Filters
               </button>
 
-              <button className="flex items-center gap-2 border border-zinc-200 hover:bg-zinc-50 px-6 py-3 rounded-2xl transition">
+              <button
+                type="button"
+                onClick={() => void loadNewApplicants()}
+                className="flex items-center gap-2 border border-zinc-200 hover:bg-zinc-50 px-6 py-3 rounded-2xl transition"
+              >
                 <RefreshCw className="w-5 h-5" /> Refresh
               </button>
             </div>
@@ -368,10 +375,27 @@ export default function NewCandidatesPage() {
               </div>
             </div>
 
-            {loading ? (
+            {fetchError ? (
+              <div className="px-6 py-10">
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mb-4">
+                  {fetchError}
+                </div>
+                <p className="text-center text-sm text-zinc-500">
+                  Check <code className="text-xs bg-zinc-100 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> and that
+                  the <code className="text-xs bg-zinc-100 px-1 rounded">worker</code> table exists.
+                </p>
+              </div>
+            ) : loading ? (
               <div className="text-center py-20 text-zinc-500">Loading new applicants...</div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-20 text-zinc-500">No new applicants found.</div>
+              <div className="text-center py-20 text-zinc-500 space-y-2">
+                <div>No new applicants found.</div>
+                <div className="text-xs text-zinc-400 max-w-md mx-auto">
+                  Rows need <code className="bg-zinc-100 px-1 rounded">status</code> of{" "}
+                  <code className="bg-zinc-100 px-1 rounded">new</code> (any casing) or NULL. Workers created outside
+                  this pipeline may use another status.
+                </div>
+              </div>
             ) : (
               <div className="overflow-auto">
                 <table className="min-w-[980px] w-full">

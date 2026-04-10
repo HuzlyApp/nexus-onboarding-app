@@ -24,6 +24,7 @@ export default function Step1Upload(){
     localStorage.setItem("resumeMimeType", selected.type || "")
     // Clear previous parsing results when choosing a new file.
     localStorage.removeItem("parsedResume")
+    localStorage.removeItem("resumeStoragePath")
   }
 
   function handleFile(e:React.ChangeEvent<HTMLInputElement>){
@@ -87,6 +88,13 @@ export default function Step1Upload(){
         // 1) Extract text from the uploaded PDF
         const fd = new FormData()
         fd.append("file", file)
+        const applicantId =
+          typeof window !== "undefined"
+            ? localStorage.getItem("applicantId")
+            : null
+        if (applicantId) {
+          fd.append("applicantId", applicantId)
+        }
         const uploadRes = await fetch("/api/upload-resume", {
           method: "POST",
           body: fd,
@@ -95,10 +103,17 @@ export default function Step1Upload(){
           const data = await uploadRes.json().catch(() => ({}))
           throw new Error(data?.error || "Failed to read resume")
         }
-        const uploadJson = (await uploadRes.json()) as { text: string; fileName?: string }
+        const uploadJson = (await uploadRes.json()) as {
+          text: string
+          fileName?: string
+          storagePath?: string
+        }
         const text = uploadJson?.text
+        if (uploadJson.storagePath) {
+          localStorage.setItem("resumeStoragePath", uploadJson.storagePath)
+        }
         if (!text || typeof text !== "string" || !text.trim()) {
-          throw new Error("Could not extract text from the resume PDF")
+          throw new Error("Could not extract text from the resume file")
         }
 
         // 2) Convert extracted text into structured JSON

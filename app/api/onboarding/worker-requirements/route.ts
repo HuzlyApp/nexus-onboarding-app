@@ -12,6 +12,10 @@ type Body = {
   ssn_card_back_path?: string | null
   drivers_license_front_path?: string | null
   drivers_license_back_path?: string | null
+  resume_path?: string | null
+  job_certificate_path?: string | null
+  drug_test_results_path?: string | null
+  w9_path?: string | null
 }
 
 const PATH_KEYS = [
@@ -157,8 +161,13 @@ export async function POST(req: NextRequest) {
       ...merged,
       updated_at,
     }
+    const bodyRecord = body as Record<string, unknown>
     for (const k of OTHER_KEYS) {
-      rowPayload[k] = normPath(existing?.[k]) ?? null
+      if (bodyRecord[k] !== undefined) {
+        rowPayload[k] = normPath(bodyRecord[k])
+      } else {
+        rowPayload[k] = normPath(existing?.[k]) ?? null
+      }
     }
 
     // Fallback payload when the DB doesn't yet have the newer front/back columns.
@@ -168,7 +177,11 @@ export async function POST(req: NextRequest) {
       updated_at,
     }
     for (const k of OTHER_KEYS) {
-      legacyPayload[k] = normPath(existing?.[k]) ?? null
+      if (bodyRecord[k] !== undefined) {
+        legacyPayload[k] = normPath(bodyRecord[k])
+      } else {
+        legacyPayload[k] = normPath(existing?.[k]) ?? null
+      }
     }
 
     const isMissingColumnErr = (e: unknown) => {

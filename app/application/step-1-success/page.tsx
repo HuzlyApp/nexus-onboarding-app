@@ -39,6 +39,7 @@ export default function Step1Success() {
     localStorage.removeItem("resumeName")
     localStorage.removeItem("resumeFile")
     localStorage.removeItem("parsedResume")
+    localStorage.removeItem("resumeStoragePath")
 
     router.push("/application/step-1-upload")
   }

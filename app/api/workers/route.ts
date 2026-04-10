@@ -14,7 +14,8 @@ function parseStatus(v: string | null): WorkerStatus | null {
 function statusVariants(s: WorkerStatus): string[] {
   // Some DBs store enum/text values in Title Case (e.g. "New") instead of lowercase.
   const title = s.slice(0, 1).toUpperCase() + s.slice(1);
-  return Array.from(new Set([s, title]));
+  const upper = s.toUpperCase();
+  return Array.from(new Set([s, title, upper]));
 }
 
 export async function GET(req: Request) {
@@ -50,29 +51,106 @@ export async function GET(req: Request) {
 
     for (const key of keys) {
       const supabase = createClient(url, key);
-      const baseCols =
-        "id, first_name, last_name, job_role, email, phone, address1, city, state, created_at";
+      const baseColsOptions = [
+        "id, first_name, last_name, job_role, email, phone, address1, city, state, zip, created_at",
+        "id, first_name, last_name, job_role, email, phone, address1, city, state, created_at",
+      ] as const;
 
       // Some DBs have `status` (text) while others have `worker_status` (enum) with constraint `worker_status_chk`.
       // Try `status` first; if the column is missing, retry with `worker_status`.
       const attempts = [
-        { col: "status", select: `${baseCols}, status` },
-        { col: "worker_status", select: `${baseCols}, worker_status` },
-      ] as const;
+        { col: "status" as const, extra: "status" as const },
+        { col: "worker_status" as const, extra: "worker_status" as const },
+      ];
 
       let data: unknown[] | null = null;
       let error: SbErr | null = null;
       let count: number | null = null;
 
-      for (const a of attempts) {
-        let q = supabase.from("worker").select(a.select, { count: "exact", head: headOnly });
-        if (status) q = q.in(a.col, statusVariants(status));
-        const res = await q.order("created_at", { ascending: false });
-        data = (res.data as unknown[] | null) ?? null;
-        error = res.error ? { message: res.error.message, code: (res.error as { code?: string }).code } : null;
-        count = typeof res.count === "number" ? res.count : null;
-        if (!error) break;
-        if (!isMissingColumnErr(error)) break;
+      outer: for (const baseCols of baseColsOptions) {
+        for (const a of attempts) {
+          const select = `${baseCols}, ${a.extra}`;
+
+          if (status === "new") {
+            const variants = statusVariants(status);
+            const [rIn, rNull] = await Promise.all([
+              headOnly
+                ? supabase
+                    .from("worker")
+                    .select(select, { count: "exact", head: true })
+                    .in(a.col, variants)
+                : supabase
+                    .from("worker")
+                    .select(select)
+                    .in(a.col, variants)
+                    .order("created_at", { ascending: false }),
+              headOnly
+                ? supabase
+                    .from("worker")
+                    .select(select, { count: "exact", head: true })
+                    .is(a.col, null)
+                : supabase
+                    .from("worker")
+                    .select(select)
+                    .is(a.col, null)
+                    .order("created_at", { ascending: false }),
+            ]);
+
+            if (rIn.error || rNull.error) {
+              const e = rIn.error ?? rNull.error!;
+              error = {
+                message: e.message || "Supabase query failed",
+                code: (e as { code?: string }).code,
+              };
+              data = null;
+              count = null;
+              if (!isMissingColumnErr(error)) break outer;
+              continue;
+            }
+
+            if (headOnly) {
+              data = [];
+              count = (rIn.count ?? 0) + (rNull.count ?? 0);
+              error = null;
+            } else {
+              const map = new Map<string, unknown>();
+              const combined = [
+                ...((rIn.data as unknown[] | null) ?? []),
+                ...((rNull.data as unknown[] | null) ?? []),
+              ];
+              for (const row of combined) {
+                const rec = row as Record<string, unknown>;
+                const id = rec.id != null ? String(rec.id) : "";
+                if (!id) continue;
+                if (!map.has(id)) map.set(id, row);
+              }
+              const merged = [...map.values()].sort((x, y) => {
+                const ax = new Date(
+                  String((x as { created_at?: string }).created_at ?? 0)
+                ).getTime();
+                const ay = new Date(
+                  String((y as { created_at?: string }).created_at ?? 0)
+                ).getTime();
+                return ay - ax;
+              });
+              data = merged;
+              count = merged.length;
+              error = null;
+            }
+          } else {
+            let q = supabase.from("worker").select(select, { count: "exact", head: headOnly });
+            if (status) q = q.in(a.col, statusVariants(status));
+            const res = await q.order("created_at", { ascending: false });
+            data = (res.data as unknown[] | null) ?? null;
+            error = res.error
+              ? { message: res.error.message, code: (res.error as { code?: string }).code }
+              : null;
+            count = typeof res.count === "number" ? res.count : null;
+          }
+
+          if (!error) break outer;
+          if (!isMissingColumnErr(error)) break outer;
+        }
       }
 
       if (!error) {

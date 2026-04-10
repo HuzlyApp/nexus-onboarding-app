@@ -169,6 +169,32 @@ export default function Step1Review() {
         )
       }
 
+      const resumeStoragePath =
+        typeof window !== "undefined"
+          ? localStorage.getItem("resumeStoragePath")
+          : null
+      if (resumeStoragePath?.trim()) {
+        try {
+          const reqRes = await fetch("/api/onboarding/worker-requirements", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              applicantId,
+              resume_path: resumeStoragePath.trim(),
+            }),
+          })
+          if (!reqRes.ok) {
+            const j = (await reqRes.json().catch(() => ({}))) as { error?: string }
+            console.warn(
+              "[step-1-review] worker_requirements resume_path",
+              j.error || reqRes.status
+            )
+          }
+        } catch (e) {
+          console.warn("[step-1-review] worker_requirements resume_path", e)
+        }
+      }
+
       // Save to localStorage for next steps (snake_case keys for steps that read parsedResume)
       localStorage.setItem(
         "parsedResume",

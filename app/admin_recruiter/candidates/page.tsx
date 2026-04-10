@@ -1,7 +1,7 @@
 // app/admin_recruiter/candidates/page.tsx
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import {
@@ -23,7 +23,18 @@ import {
   Phone,
   MapPin,
   CalendarDays,
+  Columns2,
 } from "lucide-react"
+import { EditColumnsModal } from "./EditColumnsModal"
+import {
+  columnLabel,
+  DEFAULT_CANDIDATE_COLUMNS,
+  loadColumnOrder,
+  saveColumnOrder,
+  type CandidateColumnId,
+} from "./column-config"
+import { renderListCell } from "./render-list-cell"
+import type { CandidateRow } from "./types"
 
 type WorkerProfile = {
   id: string
@@ -33,22 +44,12 @@ type WorkerProfile = {
   email: string | null
   phone: string | null
   address1: string | null
+  address2?: string | null
   city: string | null
   state: string | null
+  zip?: string | null
   created_at: string | null
   status?: string | null
-}
-
-type Candidate = {
-  id: string
-  name: string
-  role: string
-  email: string
-  phone: string
-  address: string
-  status: string
-  createdAt: string | null
-  reference: string
 }
 
 function titleCaseStatus(s: string | null | undefined) {
@@ -70,11 +71,17 @@ const sidebarItems = [
 
 export default function CandidatesPage() {
   const pathname = usePathname()
-  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [candidates, setCandidates] = useState<CandidateRow[]>([])
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [view, setView] = useState<"card" | "list">("card")
+  const [listColumnOrder, setListColumnOrder] = useState<CandidateColumnId[]>(DEFAULT_CANDIDATE_COLUMNS)
+  const [editColumnsOpen, setEditColumnsOpen] = useState(false)
+
+  useEffect(() => {
+    setListColumnOrder(loadColumnOrder())
+  }, [])
 
   // Fetch workers dynamically from server API (avoids RLS issues in browser)
   useEffect(() => {
@@ -90,16 +97,24 @@ export default function CandidatesPage() {
           : Array.isArray(data?.workers)
             ? data.workers
             : []
-        const mapped: Candidate[] = rows.map((item) => ({
+        const mapped: CandidateRow[] = rows.map((item) => ({
           id: item.id,
           name: `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+          firstName: item.first_name ?? "",
+          lastName: item.last_name ?? "",
           role: item.job_role || "N/A",
           email: item.email || "",
           phone: item.phone || "",
           address: [item.address1, item.city, item.state].filter(Boolean).join(", "),
+          city: item.city ?? "",
+          state: item.state ?? "",
+          zip: item.zip ?? "",
+          address1: item.address1 ?? "",
+          address2: item.address2 ?? "",
           status: titleCaseStatus(item.status as string | undefined),
           createdAt: item.created_at,
           reference: item.id.slice(0, 7).toUpperCase(),
+          dateOfBirth: null,
         }))
 
         setCandidates(mapped)
@@ -283,6 +298,16 @@ export default function CandidatesPage() {
                   />
                 </button>
                 <span className="text-xs text-zinc-500">List View</span>
+                {view === "list" ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditColumnsOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    <Columns2 className="h-4 w-4" />
+                    Edit columns
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
@@ -303,7 +328,12 @@ export default function CandidatesPage() {
                 c.name.toLowerCase().includes(q) ||
                 c.role.toLowerCase().includes(q) ||
                 c.reference.toLowerCase().includes(q) ||
-                c.address.toLowerCase().includes(q)
+                c.address.toLowerCase().includes(q) ||
+                c.email.toLowerCase().includes(q) ||
+                c.phone.toLowerCase().includes(q) ||
+                c.city.toLowerCase().includes(q) ||
+                c.zip.toLowerCase().includes(q) ||
+                c.state.toLowerCase().includes(q)
               )
             })
 
@@ -322,41 +352,34 @@ export default function CandidatesPage() {
             }
 
             if (view === "list") {
+              const cols = listColumnOrder.length ? listColumnOrder : DEFAULT_CANDIDATE_COLUMNS
               return (
                 <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden">
-                  <div className="overflow-auto">
-                    <table className="min-w-[980px] w-full">
-                      <thead>
-                        <tr className="text-left text-xs uppercase tracking-widest text-zinc-400 border-b border-zinc-100">
-                          <th className="px-6 py-4 font-medium">Name</th>
-                          <th className="px-4 py-4 font-medium">Status</th>
-                          <th className="px-4 py-4 font-medium">Reference</th>
-                          <th className="px-4 py-4 font-medium">Job Role</th>
-                          <th className="px-4 py-4 font-medium">Created Date</th>
-                          <th className="px-6 py-4 font-medium">Location</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filtered.map((c) => (
-                          <tr key={c.id} className="border-b border-zinc-100 hover:bg-zinc-50/70">
-                            <td className="px-6 py-4">
-                              <div className="font-medium text-zinc-900">{c.name}</div>
-                            </td>
-                            <td className="px-4 py-4">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                {c.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-zinc-600">{c.reference}</td>
-                            <td className="px-4 py-4 text-sm text-zinc-600">{c.role}</td>
-                            <td className="px-4 py-4 text-sm text-zinc-600">{formatDate(c.createdAt)}</td>
-                            <td className="px-6 py-4 text-sm text-zinc-600">{c.address || "—"}</td>
+                    <div className="overflow-auto">
+                      <table className="min-w-[720px] w-full">
+                        <thead>
+                          <tr className="text-left text-xs uppercase tracking-widest text-zinc-400 border-b border-zinc-100">
+                            {cols.map((colId) => (
+                              <th key={colId} className="px-4 py-4 font-medium first:pl-6 last:pr-6">
+                                {columnLabel(colId)}
+                              </th>
+                            ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {filtered.map((c) => (
+                            <tr key={c.id} className="border-b border-zinc-100 hover:bg-zinc-50/70">
+                              {cols.map((colId) => (
+                                <td key={colId} className="px-4 py-4 first:pl-6 last:pr-6 align-top">
+                                  {renderListCell(colId, c, formatDate)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
               )
             }
 
@@ -419,6 +442,17 @@ export default function CandidatesPage() {
 
         </div>
       </div>
+
+      <EditColumnsModal
+        key={editColumnsOpen ? "edit-cols-open" : "edit-cols-closed"}
+        open={editColumnsOpen}
+        onOpenChange={setEditColumnsOpen}
+        value={listColumnOrder}
+        onSave={(order) => {
+          setListColumnOrder(order)
+          saveColumnOrder(order)
+        }}
+      />
     </div>
   )
 }

@@ -1,50 +1,99 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, Calendar, CheckCircle2, Menu, Plus, Settings, UserCheck, UserPlus, UserX, Users, X } from "lucide-react";
+import {
+  ArrowRight,
+  Briefcase,
+  Calendar,
+  ClipboardList,
+  Menu,
+  RefreshCw,
+  Search,
+  Settings,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 
-type TabKey =
-  | "Checklist"
-  | "Profile"
-  | "Attachments"
-  | "Skill Assessments"
-  | "Authorization"
-  | "Activities"
-  | "Facility Assignments"
-  | "History";
+type WorkerRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  job_role: string | null;
+  city: string | null;
+  state: string | null;
+  status?: string | null;
+};
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "NA";
-  const first = parts[0]?.[0] ?? "";
-  const last = parts[parts.length - 1]?.[0] ?? "";
-  return (first + last).toUpperCase();
+function titleCaseStatus(s: string | null | undefined) {
+  const v = (s || "").trim();
+  if (!v) return "—";
+  const low = v.toLowerCase();
+  return low.slice(0, 1).toUpperCase() + low.slice(1);
 }
 
-export default function NewApplicantChecklistDemoPage() {
+const sidebarItems = [
+  { label: "Candidates", href: "/admin_recruiter/candidates", icon: Users },
+  { label: "New", href: "/admin_recruiter/new", icon: UserPlus },
+  { label: "Workers", href: "/admin_recruiter/workers", icon: Briefcase },
+  { label: "Schedule", href: "/admin_recruiter/schedule", icon: Calendar },
+] as const;
+
+export default function ChecklistIndexPage() {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [workers, setWorkers] = useState<WorkerRow[]>([]);
+  const [query, setQuery] = useState("");
+  const [listMode, setListMode] = useState<"new" | "all">("new");
 
-  const candidateName = "John Doe";
-  const candidateRole = "RN";
-  const candidateLocation = "Boston, MA";
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      setLoading(true);
+      setError(null);
+      try {
+        const url =
+          listMode === "new" ? "/api/workers?status=new" : "/api/workers";
+        const res = await fetch(url);
+        const json = (await res.json()) as { workers?: WorkerRow[]; error?: string };
+        if (!res.ok) throw new Error(json.error || "Failed to load workers");
+        if (!cancelled) setWorkers(Array.isArray(json.workers) ? json.workers : []);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load");
+          setWorkers([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [listMode]);
 
-  const tabKeys: TabKey[] = [
-    "Checklist",
-    "Profile",
-    "Attachments",
-    "Skill Assessments",
-    "Authorization",
-    "Activities",
-    "Facility Assignments",
-    "History",
-  ];
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return workers;
+    return workers.filter((w) => {
+      const name = `${w.first_name ?? ""} ${w.last_name ?? ""}`.toLowerCase();
+      const loc = [w.city, w.state].filter(Boolean).join(" ").toLowerCase();
+      return (
+        name.includes(q) ||
+        (w.job_role || "").toLowerCase().includes(q) ||
+        loc.includes(q) ||
+        w.id.toLowerCase().includes(q)
+      );
+    });
+  }, [workers, query]);
 
   return (
     <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0A1F1C] text-white transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -63,33 +112,14 @@ export default function NewApplicantChecklistDemoPage() {
 
           <nav className="flex-1 px-3 py-8 space-y-1">
             <div className="px-4 text-xs uppercase tracking-widest text-teal-400/70 mb-4">
-              PERSONAL SETTINGS
-            </div>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl">
-              Profile
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl">
-              Account
-            </a>
-
-            <div className="px-4 pt-8 text-xs uppercase tracking-widest text-teal-400/70 mb-4">
               TEAM MANAGEMENT
             </div>
-
-            {[
-              { label: "Candidates", href: "/admin_recruiter/candidates", icon: Users },
-              { label: "New", href: "/admin_recruiter/new", icon: UserPlus },
-              { label: "Pending", href: "/admin_recruiter/pending", icon: UserCheck },
-              { label: "Approved", href: "/admin_recruiter/approved", icon: UserCheck },
-              { label: "Disapproved", href: "/admin_recruiter/disapproved", icon: UserX },
-              { label: "Workers", href: "/admin_recruiter/workers", icon: Briefcase },
-              { label: "Schedule", href: "/admin_recruiter/schedule", icon: Calendar },
-            ].map((item) => {
+            {sidebarItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
                 <Link
-                  key={`${item.href}-${item.label}`}
+                  key={item.href}
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 text-sm rounded-2xl transition-all ${
                     isActive ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10"
@@ -100,288 +130,183 @@ export default function NewApplicantChecklistDemoPage() {
                 </Link>
               );
             })}
-
             <div className="px-4 pt-10">
-              <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 rounded-2xl">
+              <span className="flex items-center gap-3 px-4 py-3 text-sm text-white/50 rounded-2xl">
                 <Settings className="w-5 h-5" /> Settings
-              </a>
+              </span>
             </div>
           </nav>
         </div>
       </div>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
-        <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
+        <header className="h-16 border-b bg-white flex items-center px-6 justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="lg:hidden text-zinc-700"
+            >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <div className="flex items-baseline gap-3">
-              <div className="font-semibold text-2xl">New Applicant</div>
-              <Link href="/admin_recruiter/new" className="text-sm text-zinc-500 hover:text-zinc-700">
-                Back to New
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1 rounded-full text-sm">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              Online
-            </div>
-
             <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+              <ClipboardList className="w-6 h-6 text-teal-700" />
+              <div>
+                <div className="font-semibold text-xl text-zinc-900">Applicant checklist</div>
+                <div className="text-xs text-zinc-500">Workers from the database — open a row to view progress</div>
               </div>
-              <img
-                src="https://i.pravatar.cc/128?u=sean"
-                alt="Sean Smith"
-                className="w-9 h-9 rounded-full object-cover"
-              />
             </div>
           </div>
+          <Link
+            href="/admin_recruiter/new"
+            className="text-sm text-teal-700 hover:underline flex items-center gap-1"
+          >
+            New applicants
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </header>
 
-        <div className="flex-1 p-8 overflow-auto">
-          <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
-              Admin - New Applicant Detailed Page - Checklist
+        <div className="flex-1 p-6 md:p-8 overflow-auto">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl font-semibold text-zinc-900">Select a worker</h1>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Rows load from the <code className="text-xs bg-zinc-100 px-1 rounded">worker</code> table via{" "}
+                  <code className="text-xs bg-zinc-100 px-1 rounded">/api/workers</code>. Each{" "}
+                  <code className="text-xs bg-zinc-100 px-1 rounded">id</code> opens{" "}
+                  <code className="text-xs bg-zinc-100 px-1 rounded">/admin_recruiter/new/checklist/[id]</code>.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoading(true);
+                  const url =
+                    listMode === "new" ? "/api/workers?status=new" : "/api/workers";
+                  fetch(url)
+                    .then((r) => r.json())
+                    .then((json: { workers?: WorkerRow[] }) =>
+                      setWorkers(Array.isArray(json.workers) ? json.workers : [])
+                    )
+                    .catch(() => setError("Refresh failed"))
+                    .finally(() => setLoading(false));
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
             </div>
 
-            <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
-              <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-teal-600 text-white flex items-center justify-center font-semibold text-sm">
-                    {initials(candidateName)}
-                  </div>
-                  <div>
-                    <div className="text-lg font-semibold text-zinc-900">{candidateName}</div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
-                    <div className="text-xs text-zinc-400">{candidateLocation}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="text-right hidden sm:block">
-                    <div className="text-xs text-zinc-500">Days in current stage</div>
-                    <div className="text-sm font-semibold text-zinc-800">2 days</div>
-                  </div>
-
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
-                    <Plus className="inline-block w-4 h-4 mr-2" />
-                    New Appointment
-                  </button>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <div className="flex rounded-2xl border border-zinc-200 bg-zinc-100/80 p-1 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setListMode("new")}
+                  className={`rounded-xl px-4 py-1.5 text-xs font-medium transition ${
+                    listMode === "new" ? "bg-white shadow text-zinc-900" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  New only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setListMode("all")}
+                  className={`rounded-xl px-4 py-1.5 text-xs font-medium transition ${
+                    listMode === "all" ? "bg-white shadow text-zinc-900" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  All workers
+                </button>
               </div>
+              <div className="flex flex-1 items-center bg-white border border-zinc-200 rounded-2xl px-4 py-2.5 max-w-md">
+                <Search className="w-5 h-5 text-zinc-400 mr-2 shrink-0" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by name, role, location, or id"
+                  className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+                />
+              </div>
+            </div>
 
-              <div className="p-6 grid grid-cols-12 gap-6">
-                <aside className="col-span-3 space-y-4">
-                  <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-sm font-semibold text-zinc-900">Progress Checklist Tracker</div>
-                      <span className="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
-                        In Progress
-                      </span>
-                    </div>
+            {error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mb-4">
+                {error}
+              </div>
+            ) : null}
 
-                    <div className="flex items-baseline justify-between mb-3">
-                      <div className="text-2xl font-semibold text-zinc-900">3</div>
-                      <div className="text-xs text-zinc-500">of 5 items</div>
-                    </div>
-
-                    <div className="h-2 rounded-full bg-zinc-200 overflow-hidden mb-4">
-                      <div className="h-full w-[60%] bg-teal-600 rounded-full" />
-                    </div>
-
-                    <div className="space-y-2">
-                      {[
-                        "Claimed & Assigned Facilities",
-                        "Facility Assigned",
-                        "Assign Rate",
-                        "Verified Documents",
-                        "Initial Screening",
-                      ].map((label, idx) => {
-                        const done = idx < 3;
+            <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-[720px] w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wider text-zinc-400 border-b border-zinc-100 bg-zinc-50/80">
+                      <th className="px-5 py-3 font-medium">Name</th>
+                      <th className="px-4 py-3 font-medium">Job role</th>
+                      <th className="px-4 py-3 font-medium">Location</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-5 py-3 font-medium text-right">Checklist</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={5} className="px-5 py-16 text-center text-zinc-500">
+                          Loading workers…
+                        </td>
+                      </tr>
+                    ) : filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-5 py-16 text-center text-zinc-500">
+                          No workers found.{" "}
+                          <Link href="/admin_recruiter/new" className="text-teal-700 font-medium hover:underline">
+                            Go to New applicants
+                          </Link>
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map((w) => {
+                        const name =
+                          `${w.first_name ?? ""} ${w.last_name ?? ""}`.trim() || "Unnamed";
+                        const loc = [w.city, w.state].filter(Boolean).join(", ") || "—";
                         return (
-                          <div key={label} className="flex items-center gap-2 text-xs">
-                            {done ? (
-                              <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                            ) : (
-                              <div className="w-4 h-4 border border-zinc-300 rounded-full" />
-                            )}
-                            <span className={done ? "text-zinc-800" : "text-zinc-500"}>
-                              {label}
-                            </span>
-                          </div>
+                          <tr
+                            key={w.id}
+                            className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/80"
+                          >
+                            <td className="px-5 py-3.5 font-medium text-zinc-900">{name}</td>
+                            <td className="px-4 py-3.5 text-zinc-600">{w.job_role || "—"}</td>
+                            <td className="px-4 py-3.5 text-zinc-600">{loc}</td>
+                            <td className="px-4 py-3.5">
+                              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                                {titleCaseStatus(w.status)}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 text-right">
+                              <Link
+                                href={`/admin_recruiter/new/checklist/${w.id}`}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 transition"
+                              >
+                                Open
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </Link>
+                            </td>
+                          </tr>
                         );
-                      })}
-                    </div>
-                  </div>
-                </aside>
-
-                <main className="col-span-9 space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {tabKeys.map((key) => {
-                      const href =
-                        key === "Checklist"
-                          ? "/admin_recruiter/new/checklist"
-                          : key === "Profile"
-                            ? "/admin_recruiter/new/profile"
-                            : key === "Attachments"
-                              ? "/admin_recruiter/new/attachments"
-                              : key === "Skill Assessments"
-                                ? "/admin_recruiter/new/skill-assessments"
-                                  : key === "Authorization"
-                                    ? "/admin_recruiter/new/authorization"
-                                    : key === "Facility Assignments"
-                                      ? "/admin_recruiter/new/facility-assignments"
-                                      : key === "History"
-                                        ? "/admin_recruiter/new/history"
-                                        : "#";
-                      const isActive = key === "Checklist";
-                      return (
-                        <Link
-                          key={key}
-                          href={href}
-                          className={`text-xs px-3 py-1.5 rounded-xl border transition ${
-                            isActive
-                              ? "border-[#7AA6FF] bg-white text-zinc-900"
-                              : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
-                          }`}
-                        >
-                          {key}
-                        </Link>
-                      );
-                    })}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="bg-white/70 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="text-sm font-semibold text-zinc-900">
-                            1. Facility Specific Requirements
-                          </div>
-                          <div className="text-xs text-zinc-500">Complete the facility workflow</div>
-                        </div>
-                        <span className="text-[11px] px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium">
-                          Pending
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {[
-                          {
-                            n: "1.1",
-                            title: "Facility Assigned",
-                            items: ["Facility Assigned", "Assign Rate"],
-                          },
-                          {
-                            n: "1.2",
-                            title: "Verified Documents",
-                            items: ["Nursing License", "TB Test", "CPR Certification"],
-                          },
-                        ].map((s) => (
-                          <div key={s.n} className="rounded-xl border border-zinc-200/70 bg-white/60 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-xs text-zinc-500">Step {s.n}</div>
-                                <div className="text-sm font-medium text-zinc-900">{s.title}</div>
-                              </div>
-                              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
-                                Pending
-                              </span>
-                            </div>
-
-                            <div className="mt-3 space-y-2">
-                              {s.items.map((it) => (
-                                <div key={it} className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2 text-zinc-600">
-                                    <div className="w-3.5 h-3.5 rounded-sm border border-zinc-300 bg-white" />
-                                    {it}
-                                  </div>
-                                  <span className="text-[11px] text-zinc-400">Pending</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="bg-white/70 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="text-sm font-semibold text-zinc-900">
-                            2. Final Onboarding Steps
-                          </div>
-                          <div className="text-xs text-zinc-500">Complete onboarding for start date</div>
-                        </div>
-                        <span className="text-[11px] px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-100 font-medium">
-                          Pending
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {[
-                          {
-                            n: "2.1",
-                            title: "Welcome Email Sent",
-                            items: ["Send welcome email", "Confirm docs"],
-                          },
-                          {
-                            n: "2.2",
-                            title: "Badge & Setup",
-                            items: ["Badge sent", "Facility setup checklist"],
-                          },
-                          {
-                            n: "2.3",
-                            title: "401k / Affiliation",
-                            items: ["Enroll in 401k", "Verify plan"],
-                          },
-                          {
-                            n: "2.4",
-                            title: "Final Onboarding Call",
-                            items: ["Schedule call", "Confirm availability"],
-                          },
-                        ].map((s) => (
-                          <div key={s.n} className="rounded-xl border border-zinc-200/70 bg-white/60 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-xs text-zinc-500">Step {s.n}</div>
-                                <div className="text-sm font-medium text-zinc-900">{s.title}</div>
-                              </div>
-                              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
-                                Pending
-                              </span>
-                            </div>
-
-                            <div className="mt-3 space-y-2">
-                              {s.items.map((it) => (
-                                <div key={it} className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2 text-zinc-600">
-                                    <div className="w-3.5 h-3.5 rounded-sm border border-zinc-300 bg-white" />
-                                    {it}
-                                  </div>
-                                  <span className="text-[11px] text-zinc-400">Pending</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </main>
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
+
+            <p className="mt-4 text-xs text-zinc-400">
+              Total: {filtered.length} {query.trim() ? `(filtered from ${workers.length})` : `worker${workers.length === 1 ? "" : "s"}`}
+            </p>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
