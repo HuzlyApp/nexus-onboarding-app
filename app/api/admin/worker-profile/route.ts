@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { normalizeResumeStorageObjectPath } from "@/lib/onboarding/normalize-resume-storage-path"
 import { getSupabaseUrl } from "@/lib/supabase-env"
+import { WORKER_RESUMES_BUCKET } from "@/lib/supabase-storage-buckets"
 
 export const runtime = "nodejs"
 
 function hasUrl(v: unknown): boolean {
   return typeof v === "string" && v.trim().length > 0
+}
+
+function urlOrNull(v: unknown): string | null {
+  if (typeof v !== "string") return null
+  const s = v.trim()
+  return s.length > 0 ? s : null
 }
 
 function titleCaseStatus(s: string | null | undefined): string {
@@ -42,6 +50,45 @@ export async function GET(req: NextRequest) {
     }
 
     const w = worker as Record<string, unknown>
+    const userIdForLegacy =
+      w.user_id != null && String(w.user_id).trim() !== "" ? String(w.user_id) : null
+
+    const { data: reqRows, error: reqErr } = await supabase
+      .from("worker_requirements")
+      .select("resume_path")
+      .or(
+        userIdForLegacy
+          ? `worker_id.eq.${workerId},worker_id.eq.${userIdForLegacy}`
+          : `worker_id.eq.${workerId}`
+      )
+      .limit(1)
+
+    if (reqErr) {
+      console.warn("[admin/worker-profile] worker_requirements", reqErr)
+    }
+
+    const reqRow = Array.isArray(reqRows) ? reqRows[0] : reqRows
+    const resumePathRaw = (reqRow as { resume_path?: string } | null | undefined)?.resume_path
+    const resumePathStored =
+      typeof resumePathRaw === "string" && resumePathRaw.trim() !== ""
+        ? resumePathRaw.trim()
+        : null
+
+    const resumePath = resumePathStored ? normalizeResumeStorageObjectPath(resumePathStored) : null
+    const resumePathCanonical =
+      resumePath && resumePath.length > 0 ? resumePath : null
+
+    let resumeUrl: string | null = null
+    if (resumePathCanonical) {
+      const { data: signed, error: signErr } = await supabase.storage
+        .from(WORKER_RESUMES_BUCKET)
+        .createSignedUrl(resumePathCanonical, 3600)
+      if (signErr) {
+        console.warn("[admin/worker-profile] resume signed URL", signErr)
+      } else {
+        resumeUrl = signed?.signedUrl ?? null
+      }
+    }
 
     const { data: docRow } = await supabase.from("worker_documents").select("*").eq("worker_id", workerId).maybeSingle()
 
@@ -87,6 +134,7 @@ export async function GET(req: NextRequest) {
     }
 
     const profileComplete = Boolean(w.id)
+    const hasResumePath = Boolean(resumePathCanonical)
     const licenseStep = licenseOk
     const assessmentsComplete = saTotal > 0 && saCompleted >= saTotal
     const authDocsComplete = docsCompleteCount >= 4
@@ -101,7 +149,11 @@ export async function GET(req: NextRequest) {
     }
 
     const onboardingSteps = [
-      { id: "resume", label: "Add Resume / Profile", state: step(profileComplete, profileComplete) },
+      {
+        id: "resume",
+        label: "Add Resume / Profile",
+        state: step(hasResumePath, !hasResumePath && profileComplete),
+      },
       {
         id: "license",
         label: "Professional License",
@@ -160,6 +212,11 @@ export async function GET(req: NextRequest) {
         hourly_rate: w.hourly_rate != null ? String(w.hourly_rate) : null,
         ssn_last_four: w.ssn_last_four != null ? String(w.ssn_last_four) : null,
       },
+      requirements: {
+        resume_path: resumePathCanonical,
+        resume_path_raw: resumePathStored,
+        resume_url: resumeUrl,
+      },
       documents: docs
         ? {
             updated_at: docs.updated_at != null ? String(docs.updated_at) : null,
@@ -169,6 +226,21 @@ export async function GET(req: NextRequest) {
             identity_uploaded: idOk,
           }
         : null,
+      document_urls: {
+        nursing_license_url: urlOrNull(docs?.nursing_license_url),
+        tb_test_url: urlOrNull(docs?.tb_test_url),
+        cpr_certification_url: urlOrNull(docs?.cpr_certification_url),
+        ssn_url: urlOrNull(docs?.ssn_url),
+        ssn_back_url: urlOrNull(docs?.ssn_back_url),
+        drivers_license_url: urlOrNull(docs?.drivers_license_url),
+        drivers_license_back_url: urlOrNull(docs?.drivers_license_back_url),
+      },
+      signeasy: {
+        document_name:
+          docs != null && docs.document_name != null ? String(docs.document_name) : null,
+        document_id:
+          docs != null && docs.document_id != null ? String(docs.document_id) : null,
+      },
       references,
       skillAssessments: { completed: saCompleted, total: saTotal },
       onboardingSteps,

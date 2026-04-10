@@ -17,13 +17,16 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-
 type WorkerProfile = {
   id: string;
   first_name: string | null;
   last_name: string | null;
   job_role: string | null;
+  status_label?: string;
+};
+
+type WorkerProfileResponse = {
+  worker: WorkerProfile;
 };
 
 function initials(name: string) {
@@ -41,25 +44,28 @@ export default function NewApplicantFacilityAssignmentsPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<WorkerProfileResponse | null>(null);
 
   useEffect(() => {
     async function fetchApplicant() {
       if (!applicantId) return;
       setLoading(true);
+      setLoadError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role")
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(
+          `/api/admin/worker-profile?workerId=${encodeURIComponent(applicantId)}`
+        );
+        const json = (await res.json()) as WorkerProfileResponse & { error?: string };
+        if (!res.ok) {
+          throw new Error(json.error || `Failed to load profile (${res.status})`);
+        }
+        setProfile(json);
       } catch (e) {
-        console.error("Failed to fetch applicant for facility assignments:", e);
-        setApplicant(null);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("Failed to fetch applicant for facility assignments:", msg, e);
+        setLoadError(msg);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -68,12 +74,15 @@ export default function NewApplicantFacilityAssignmentsPage() {
     fetchApplicant();
   }, [applicantId]);
 
+  const applicant = profile?.worker ?? null;
+
   const candidateName = useMemo(() => {
     const n = `${applicant?.first_name ?? ""} ${applicant?.last_name ?? ""}`.trim();
     return n || "Applicant";
   }, [applicant]);
 
   const candidateRole = applicant?.job_role || "N/A";
+  const statusLabel = applicant?.status_label?.trim() || "New Applicant";
 
   const tabLink = (label: string, href: string, active?: boolean) => (
     <Link
@@ -203,8 +212,14 @@ export default function NewApplicantFacilityAssignmentsPage() {
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
             <div className="mb-5 text-xs text-zinc-400">
-              Admin - New Applicant Detailed Page - Recommendation
+              Admin - New Applicant Detailed Page - Facility Assignments
             </div>
+
+            {loadError ? (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {loadError}
+              </div>
+            ) : null}
 
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
               {/* Top */}
@@ -223,7 +238,7 @@ export default function NewApplicantFacilityAssignmentsPage() {
 
                 <div className="flex items-center gap-3">
                   <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
-                    New Applicant
+                    {loading ? "…" : statusLabel}
                   </span>
                   <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
@@ -250,6 +265,7 @@ export default function NewApplicantFacilityAssignmentsPage() {
                     `/admin_recruiter/new/facility-assignments/${applicantId}`,
                     true
                   )}
+                  {tabLink("Agreement", `/admin_recruiter/new/agreement/${applicantId}`, false)}
                   {tabLink("History", `/admin_recruiter/new/history/${applicantId}`, false)}
                 </div>
               </div>
@@ -262,11 +278,14 @@ export default function NewApplicantFacilityAssignmentsPage() {
                   </div>
                   <div className="text-sm font-semibold text-zinc-900">No facility assigned yet</div>
                   <div className="text-xs text-zinc-500 mt-2">
-                    No facility assigned yet to the applicant.
+                    No facility assigned yet for {loading ? "this applicant" : candidateName}.
                   </div>
-                  <div className="text-xs text-teal-700 mt-2 underline underline-offset-4">
+                  <a
+                    href="#"
+                    className="text-xs text-teal-700 mt-2 underline underline-offset-4 inline-block"
+                  >
                     Learn more about facility recommendations
-                  </div>
+                  </a>
 
                   <button className="mt-6 inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-2xl transition text-sm">
                     <Plus className="w-4 h-4" />

@@ -7,7 +7,14 @@ type SbErr = { message: string; code?: string };
 function parseStatus(v: string | null): WorkerStatus | null {
   if (!v) return null;
   const s = v.trim().toLowerCase();
-  if (s === "new" || s === "pending" || s === "approved" || s === "disapproved") return s;
+  if (
+    s === "new" ||
+    s === "pending" ||
+    s === "approved" ||
+    s === "disapproved"
+  ) {
+    return s;
+  }
   return null;
 }
 
@@ -56,11 +63,12 @@ export async function GET(req: Request) {
         "id, first_name, last_name, job_role, email, phone, address1, city, state, created_at",
       ] as const;
 
-      // Some DBs have `status` (text) while others have `worker_status` (enum) with constraint `worker_status_chk`.
-      // Try `status` first; if the column is missing, retry with `worker_status`.
+      // `worker_status_chk` is the CHECK name; the column is `worker_status` (or legacy `status`).
+      // Prefer `worker_status` first: when both columns exist, Studio / CHECK usually reflect `worker_status`;
+      // filtering `status` first can return 0 rows while `worker_status` is `new`.
       const attempts = [
-        { col: "status" as const, extra: "status" as const },
         { col: "worker_status" as const, extra: "worker_status" as const },
+        { col: "status" as const, extra: "status" as const },
       ];
 
       let data: unknown[] | null = null;

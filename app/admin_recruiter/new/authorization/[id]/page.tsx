@@ -18,16 +18,36 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 type WorkerProfile = {
   id: string;
   first_name: string | null;
   last_name: string | null;
   job_role: string | null;
+  status_label?: string;
 };
 
-type DocFile = { name: string; size: string };
+type ProfileApi = {
+  worker: WorkerProfile;
+  document_urls: {
+    nursing_license_url: string | null;
+    tb_test_url: string | null;
+    cpr_certification_url: string | null;
+    ssn_url: string | null;
+    ssn_back_url: string | null;
+    drivers_license_url: string | null;
+    drivers_license_back_url: string | null;
+  };
+  signeasy: { document_name: string | null; document_id: string | null };
+};
+
+type DocSlot = { label: string; url: string | null };
+
+type DocSection = {
+  id: string;
+  title: string;
+  slots: DocSlot[];
+};
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -37,30 +57,42 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
-const documentsSeed = [
-  {
-    title: "SSN Card",
-    uploaded: "2 of 2",
-    files: [
-      { name: "SSN-card-front.pdf", size: "7.23 MB" },
-      { name: "SSN-card-back.pdf", size: "7.23 MB" },
-    ] as DocFile[],
-  },
-  {
-    title: "Drivers License",
-    uploaded: "2 of 2",
-    files: [
-      { name: "drivers-license-front.jpg", size: "5.23 MB" },
-      { name: "drivers-license-back.jpg", size: "5.23 MB" },
-    ] as DocFile[],
-  },
-  {
-    title: "Employment Agreement",
-    uploaded: "1 of 1",
-    files: [{ name: "Employment_agreement.pdf", size: "7.23 MB" }] as DocFile[],
-    signed: true,
-  },
-] as const;
+function fileLabelFromUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean).pop();
+    return seg ? decodeURIComponent(seg) : "File";
+  } catch {
+    return "File";
+  }
+}
+
+function FileActions({ url }: { url: string | null }) {
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <button
+        type="button"
+        disabled={!url}
+        onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
+        className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+        aria-label="View file"
+      >
+        <Eye className="w-4 h-4 text-teal-700" />
+      </button>
+      <a
+        href={url ?? undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center ${
+          !url ? "pointer-events-none opacity-40" : ""
+        }`}
+        aria-label="Download file"
+      >
+        <Download className="w-4 h-4 text-teal-700" />
+      </a>
+    </div>
+  );
+}
 
 export default function NewApplicantAuthorizationFilledPage() {
   const pathname = usePathname();
@@ -69,25 +101,28 @@ export default function NewApplicantAuthorizationFilledPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ProfileApi | null>(null);
 
   useEffect(() => {
     async function fetchApplicant() {
       if (!applicantId) return;
       setLoading(true);
+      setLoadError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role")
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(
+          `/api/admin/worker-profile?workerId=${encodeURIComponent(applicantId)}`
+        );
+        const json = (await res.json()) as ProfileApi & { error?: string };
+        if (!res.ok) {
+          throw new Error(json.error || `Failed to load profile (${res.status})`);
+        }
+        setProfile(json);
       } catch (e) {
-        console.error("Failed to fetch applicant for authorization:", e);
-        setApplicant(null);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("Failed to fetch applicant for authorization:", msg, e);
+        setLoadError(msg);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -96,12 +131,54 @@ export default function NewApplicantAuthorizationFilledPage() {
     fetchApplicant();
   }, [applicantId]);
 
+  const applicant = profile?.worker ?? null;
+
   const candidateName = useMemo(() => {
     const n = `${applicant?.first_name ?? ""} ${applicant?.last_name ?? ""}`.trim();
     return n || "Applicant";
   }, [applicant]);
 
   const candidateRole = applicant?.job_role || "N/A";
+  const statusLabel = applicant?.status_label?.trim() || "New Applicant";
+
+  const signeasy = profile?.signeasy;
+  const du = profile?.document_urls;
+
+  const authHasPacket = Boolean(signeasy?.document_name?.trim() || signeasy?.document_id);
+  const authSigned = Boolean(signeasy?.document_id);
+  const authFileLabel =
+    signeasy?.document_name?.trim() || "Authorization agreement (e-sign)";
+
+  const documentSections: DocSection[] = useMemo(() => {
+    if (!du) return [];
+    return [
+      {
+        id: "ssn",
+        title: "SSN Card",
+        slots: [
+          { label: "Front", url: du.ssn_url },
+          { label: "Back", url: du.ssn_back_url },
+        ],
+      },
+      {
+        id: "dl",
+        title: "Driver's License",
+        slots: [
+          { label: "Front", url: du.drivers_license_url },
+          { label: "Back", url: du.drivers_license_back_url },
+        ],
+      },
+    ];
+  }, [du]);
+
+  const reviewRows = useMemo(() => {
+    const rows: { id: string; title: string }[] = [
+      { id: "auth", title: "Authorization" },
+      { id: "ssn", title: "SSN Card" },
+      { id: "dl", title: "Driver's License" },
+    ];
+    return rows;
+  }, []);
 
   const tabLink = (label: string, href: string, active?: boolean) => (
     <Link
@@ -118,7 +195,6 @@ export default function NewApplicantAuthorizationFilledPage() {
 
   return (
     <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0A1F1C] text-white transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -199,7 +275,6 @@ export default function NewApplicantAuthorizationFilledPage() {
         </div>
       </div>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
@@ -235,8 +310,13 @@ export default function NewApplicantAuthorizationFilledPage() {
               Admin - New Applicant Detailed Page - Authorization (filled)
             </div>
 
+            {loadError ? (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {loadError}
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
-              {/* Top */}
               <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-teal-600 text-white flex items-center justify-center font-semibold text-sm">
@@ -252,7 +332,7 @@ export default function NewApplicantAuthorizationFilledPage() {
 
                 <div className="flex items-center gap-3">
                   <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
-                    New Applicant
+                    {loading ? "…" : statusLabel}
                   </span>
                   <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
@@ -261,7 +341,6 @@ export default function NewApplicantAuthorizationFilledPage() {
                 </div>
               </div>
 
-              {/* Tabs */}
               <div className="px-6 py-4 border-b border-[#9CC3FF]/20 bg-white/30">
                 <div className="flex flex-wrap gap-2">
                   {tabLink("Checklist", `/admin_recruiter/new/checklist/${applicantId}`, false)}
@@ -279,12 +358,12 @@ export default function NewApplicantAuthorizationFilledPage() {
                     `/admin_recruiter/new/facility-assignments/${applicantId}`,
                     false
                   )}
+                  {tabLink("Agreement", `/admin_recruiter/new/agreement/${applicantId}`, false)}
                   {tabLink("History", `/admin_recruiter/new/history/${applicantId}`, false)}
                 </div>
               </div>
 
               <div className="p-6 grid grid-cols-12 gap-6">
-                {/* Left */}
                 <section className="col-span-7 space-y-6">
                   <div>
                     <div className="text-sm font-semibold text-zinc-900 mb-3">Authorization</div>
@@ -293,120 +372,136 @@ export default function NewApplicantAuthorizationFilledPage() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-xs text-zinc-500">1. Authorization</div>
                         <div className="text-xs text-zinc-500">
-                          Signed <span className="font-medium text-zinc-800">1</span> of{" "}
-                          <span className="font-medium text-zinc-800">1</span>
+                          {authSigned ? (
+                            <>
+                              Signed <span className="font-medium text-zinc-800">1</span> of{" "}
+                              <span className="font-medium text-zinc-800">1</span>
+                            </>
+                          ) : (
+                            <>Packet {authHasPacket ? "created" : "not linked"}</>
+                          )}
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-teal-200 bg-teal-50/60 p-3 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-xs font-medium text-teal-700 truncate">
-                            Authorization.pdf
+                      {authHasPacket ? (
+                        <div className="rounded-2xl border border-teal-200 bg-teal-50/60 p-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium text-teal-700 truncate">
+                              {authFileLabel}
+                            </div>
+                            <div className="text-[11px] text-zinc-500">
+                              {signeasy?.document_id
+                                ? `SignEasy document id: ${signeasy.document_id}`
+                                : "E-sign workflow"}
+                            </div>
                           </div>
-                          <div className="text-[11px] text-zinc-500">7.23 MB</div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {authSigned ? (
+                              <span className="text-[11px] px-3 py-1 rounded-full bg-teal-600 text-white font-medium">
+                                Signed
+                              </span>
+                            ) : (
+                              <span className="text-[11px] px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-medium">
+                                Pending
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              disabled
+                              className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 flex items-center justify-center opacity-40 cursor-not-allowed"
+                              title="Open from SignEasy when a viewer URL is available"
+                            >
+                              <Eye className="w-4 h-4 text-teal-700" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled
+                              className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 flex items-center justify-center opacity-40 cursor-not-allowed"
+                              title="Download when a file URL is stored"
+                            >
+                              <Download className="w-4 h-4 text-teal-700" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[11px] px-3 py-1 rounded-full bg-teal-600 text-white font-medium">
-                            Signed
-                          </span>
-                          <button className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center">
-                            <Eye className="w-4 h-4 text-teal-700" />
-                          </button>
-                          <button className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center">
-                            <Download className="w-4 h-4 text-teal-700" />
-                          </button>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/60 px-4 py-6 text-xs text-zinc-500">
+                          No SignEasy authorization packet linked for this worker yet.
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
                   <div>
                     <div className="text-sm font-semibold text-zinc-900 mb-3">Documents</div>
                     <div className="space-y-4">
-                      {documentsSeed.map((d, idx) => (
-                        <div
-                          key={d.title}
-                          className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="text-xs text-zinc-500">
-                              {idx + 2}. {d.title}
-                            </div>
-                            <div className="text-xs text-zinc-500">
-                              Uploaded{" "}
-                              <span className="font-medium text-zinc-800">{d.uploaded.split(" ")[0]}</span>{" "}
-                              of{" "}
-                              <span className="font-medium text-zinc-800">{d.uploaded.split(" ")[2]}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            {d.files.map((f) => (
-                              <div
-                                key={f.name}
-                                className="rounded-2xl border border-teal-200 bg-teal-50/60 p-3 flex items-center justify-between gap-3"
-                              >
-                                <div className="min-w-0">
-                                  <div className="text-xs font-medium text-teal-700 truncate">
-                                    {f.name}
-                                  </div>
-                                  <div className="text-[11px] text-zinc-500">{f.size}</div>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {"signed" in d && d.signed ? (
-                                    <span className="text-[11px] px-3 py-1 rounded-full bg-teal-600 text-white font-medium">
-                                      Signed
-                                    </span>
-                                  ) : null}
-                                  <button className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center">
-                                    <Eye className="w-4 h-4 text-teal-700" />
-                                  </button>
-                                  <button className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center">
-                                    <Download className="w-4 h-4 text-teal-700" />
-                                  </button>
-                                </div>
+                      {documentSections.map((d, idx) => {
+                        const up = d.slots.filter((s) => s.url).length;
+                        const tot = d.slots.length;
+                        return (
+                          <div
+                            key={d.id}
+                            className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-xs text-zinc-500">
+                                {idx + 2}. {d.title}
                               </div>
-                            ))}
+                              <div className="text-xs text-zinc-500">
+                                Uploaded{" "}
+                                <span className="font-medium text-zinc-800">{up}</span> of{" "}
+                                <span className="font-medium text-zinc-800">{tot}</span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              {d.slots.map((slot) => (
+                                <div
+                                  key={`${d.id}-${slot.label}`}
+                                  className="rounded-2xl border border-teal-200 bg-teal-50/60 p-3 flex items-center justify-between gap-3"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-medium text-teal-700 truncate">
+                                      {slot.url ? fileLabelFromUrl(slot.url) : `${slot.label} — not uploaded`}
+                                    </div>
+                                    <div className="text-[11px] text-zinc-500">{slot.label}</div>
+                                  </div>
+                                  <FileActions url={slot.url} />
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </section>
 
-                {/* Right */}
                 <section className="col-span-5">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="text-sm font-semibold text-zinc-900 mb-4">Review</div>
 
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="text-xs text-zinc-500">Authorization</div>
-                        <div className="flex items-center gap-2">
-                          <button className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition">
-                            Approved
-                          </button>
-                          <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                            Reject
-                          </button>
-                          <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                            Request eSign
-                          </button>
-                        </div>
-                      </div>
-
-                      {documentsSeed.map((d) => (
-                        <div key={d.title} className="flex items-center justify-between gap-4">
-                          <div className="text-xs text-zinc-500">{d.title}</div>
-                          <div className="flex items-center gap-2">
-                            <button className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition">
+                      {reviewRows.map((row) => (
+                        <div key={row.id} className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="text-xs text-zinc-500">{row.title}</div>
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <button
+                              type="button"
+                              className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition"
+                            >
                               Approved
                             </button>
-                            <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
+                            <button
+                              type="button"
+                              className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition"
+                            >
                               Reject
                             </button>
-                            <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                              Request a doc
+                            <button
+                              type="button"
+                              className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition"
+                            >
+                              {row.id === "auth" ? "Request eSign" : "Request a doc"}
                             </button>
                           </div>
                         </div>
@@ -422,4 +517,3 @@ export default function NewApplicantAuthorizationFilledPage() {
     </div>
   );
 }
-

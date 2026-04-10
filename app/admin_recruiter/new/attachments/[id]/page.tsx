@@ -19,8 +19,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-
 type WorkerProfile = {
   id: string;
   first_name: string | null;
@@ -28,11 +26,25 @@ type WorkerProfile = {
   job_role: string | null;
 };
 
-type Requirement = {
+type WorkerProfileResponse = {
+  worker: WorkerProfile;
+  requirements: {
+    resume_path: string | null;
+    resume_path_raw?: string | null;
+    resume_url: string | null;
+  } | null;
+  document_urls: {
+    nursing_license_url: string | null;
+    tb_test_url: string | null;
+    cpr_certification_url: string | null;
+  };
+};
+
+type AttachmentRow = {
   id: string;
   title: string;
+  url: string | null;
   filename: string;
-  size: string;
 };
 
 function initials(name: string) {
@@ -43,11 +55,22 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
-const requirementsSeed: Requirement[] = [
-  { id: "license", title: "Nursing License", filename: "nursing-license.png", size: "5.23 MB" },
-  { id: "tb", title: "TB Test", filename: "tb-test.png", size: "5.23 MB" },
-  { id: "cpr", title: "CPR Certifications", filename: "cpr-test.png", size: "5.23 MB" },
-];
+function basenameFromStoragePath(path: string | null | undefined): string {
+  if (!path?.trim()) return "—";
+  const parts = path.trim().split("/");
+  return parts[parts.length - 1] || "—";
+}
+
+function fileNameFromHttpUrl(url: string | null | undefined): string {
+  if (!url?.trim()) return "—";
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean).pop();
+    return seg ? decodeURIComponent(seg) : "—";
+  } catch {
+    return "—";
+  }
+}
 
 export default function NewApplicantAttachmentsFilledPage() {
   const pathname = usePathname();
@@ -56,25 +79,28 @@ export default function NewApplicantAttachmentsFilledPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<WorkerProfileResponse | null>(null);
 
   useEffect(() => {
     async function fetchApplicant() {
       if (!applicantId) return;
       setLoading(true);
+      setLoadError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role")
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(
+          `/api/admin/worker-profile?workerId=${encodeURIComponent(applicantId)}`
+        );
+        const json = (await res.json()) as WorkerProfileResponse & { error?: string };
+        if (!res.ok) {
+          throw new Error(json.error || `Failed to load profile (${res.status})`);
+        }
+        setProfile(json);
       } catch (e) {
-        console.error("Failed to fetch applicant for attachments:", e);
-        setApplicant(null);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("Failed to fetch applicant for attachments:", msg, e);
+        setLoadError(msg);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -82,6 +108,54 @@ export default function NewApplicantAttachmentsFilledPage() {
 
     fetchApplicant();
   }, [applicantId]);
+
+  const applicant = profile?.worker ?? null;
+
+  const attachmentRows: AttachmentRow[] = useMemo(() => {
+    if (!profile) return [];
+    const req = profile.requirements;
+    const du = profile.document_urls;
+    const resumeFileLabel = (() => {
+      if (req?.resume_path?.trim()) return basenameFromStoragePath(req.resume_path);
+      const raw = req?.resume_path_raw?.trim();
+      if (raw?.startsWith("http://") || raw?.startsWith("https://")) {
+        return fileNameFromHttpUrl(raw);
+      }
+      return basenameFromStoragePath(raw ?? null);
+    })();
+    return [
+      {
+        id: "resume",
+        title: "Resume",
+        url: req?.resume_url ?? null,
+        filename: resumeFileLabel,
+      },
+      {
+        id: "license",
+        title: "Nursing License",
+        url: du?.nursing_license_url ?? null,
+        filename: fileNameFromHttpUrl(du?.nursing_license_url ?? null),
+      },
+      {
+        id: "tb",
+        title: "TB Test",
+        url: du?.tb_test_url ?? null,
+        filename: fileNameFromHttpUrl(du?.tb_test_url ?? null),
+      },
+      {
+        id: "cpr",
+        title: "CPR Certifications",
+        url: du?.cpr_certification_url ?? null,
+        filename: fileNameFromHttpUrl(du?.cpr_certification_url ?? null),
+      },
+    ];
+  }, [profile]);
+
+  const uploadedCount = useMemo(
+    () => attachmentRows.filter((r) => r.url).length,
+    [attachmentRows]
+  );
+  const totalCount = attachmentRows.length;
 
   const candidateName = useMemo(() => {
     const n = `${applicant?.first_name ?? ""} ${applicant?.last_name ?? ""}`.trim();
@@ -222,6 +296,12 @@ export default function NewApplicantAttachmentsFilledPage() {
               Admin - New Applicant Detailed Page - Attachments (filled)
             </div>
 
+            {loadError ? (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {loadError}
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
               {/* Top */}
               <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
@@ -266,6 +346,7 @@ export default function NewApplicantAttachmentsFilledPage() {
                     `/admin_recruiter/new/facility-assignments/${applicantId}`,
                     false
                   )}
+                  {tabLink("Agreement", `/admin_recruiter/new/agreement/${applicantId}`, false)}
                   {tabLink("History", `/admin_recruiter/new/history/${applicantId}`, false)}
                 </div>
               </div>
@@ -282,13 +363,17 @@ export default function NewApplicantAttachmentsFilledPage() {
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-semibold text-zinc-900">Requirements Submitted</div>
                       <div className="text-xs text-zinc-500">
-                        Uploaded <span className="font-medium text-zinc-800">3</span> of{" "}
-                        <span className="font-medium text-zinc-800">3</span>
+                        Uploaded <span className="font-medium text-zinc-800">{uploadedCount}</span> of{" "}
+                        <span className="font-medium text-zinc-800">{totalCount}</span>
                       </div>
                     </div>
 
                     <div className="mt-4 space-y-4">
-                      {requirementsSeed.map((r, idx) => (
+                      {loading ? (
+                        <div className="text-xs text-zinc-500 py-2">Loading requirements…</div>
+                      ) : null}
+                      {!loading &&
+                        attachmentRows.map((r, idx) => (
                         <div key={r.id} className="rounded-2xl border border-zinc-200 bg-white/70 p-4">
                           <div className="text-sm font-semibold text-zinc-900">
                             {idx + 1}. {r.title}
@@ -296,17 +381,34 @@ export default function NewApplicantAttachmentsFilledPage() {
                           <div className="mt-3 rounded-2xl border border-teal-200 bg-teal-50/60 p-3 flex items-center justify-between gap-3">
                             <div className="min-w-0">
                               <div className="text-xs font-medium text-teal-700 truncate">
-                                {r.filename}
+                                {r.url ? r.filename : "Not uploaded yet"}
                               </div>
-                              <div className="text-[11px] text-zinc-500">{r.size}</div>
+                              <div className="text-[11px] text-zinc-500">
+                                {r.url ? "On file" : "—"}
+                              </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <button className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center">
+                              <button
+                                type="button"
+                                disabled={!r.url}
+                                onClick={() => r.url && window.open(r.url, "_blank", "noopener,noreferrer")}
+                                className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+                                aria-label={`View ${r.title}`}
+                              >
                                 <Eye className="w-4 h-4 text-teal-700" />
                               </button>
-                              <button className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center">
+                              <a
+                                href={r.url ?? undefined}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center ${
+                                  !r.url ? "pointer-events-none opacity-40" : ""
+                                }`}
+                                aria-label={`Download ${r.title}`}
+                              >
                                 <Download className="w-4 h-4 text-teal-700" />
-                              </button>
+                              </a>
                             </div>
                           </div>
                         </div>
@@ -326,17 +428,27 @@ export default function NewApplicantAttachmentsFilledPage() {
                     </div>
 
                     <div className="space-y-6">
-                      {requirementsSeed.map((r) => (
-                        <div key={r.id} className="flex items-center justify-between gap-4">
+                      {attachmentRows.map((r) => (
+                        <div key={`review-${r.id}`} className="flex items-center justify-between gap-4">
                           <div className="text-xs text-zinc-500">{r.title}</div>
-                          <div className="flex items-center gap-2">
-                            <button className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition">
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <button
+                              type="button"
+                              className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50"
+                              disabled={!r.url}
+                            >
                               Approved
                             </button>
-                            <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
+                            <button
+                              type="button"
+                              className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition"
+                            >
                               Reject
                             </button>
-                            <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
+                            <button
+                              type="button"
+                              className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition"
+                            >
                               Request More
                             </button>
                           </div>

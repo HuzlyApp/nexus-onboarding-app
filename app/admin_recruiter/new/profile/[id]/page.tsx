@@ -58,6 +58,10 @@ type ProfilePayload = {
   skillAssessments: { completed: number; total: number };
   onboardingSteps: OnboardingStep[];
   activity: { source: string; created_at: string | null; updated_at: string | null };
+  requirements: {
+    resume_path: string | null;
+    resume_url: string | null;
+  } | null;
 };
 
 function initials(name: string) {
@@ -320,6 +324,7 @@ export default function NewApplicantProfilePage() {
                   {tabLink("Authorization", `${base}/authorization/${id}`, false)}
                   {tabLink("Activities", `${base}/activities/${id}`, false)}
                   {tabLink("Facility Assignments", `${base}/facility-assignments/${id}`, false)}
+                  {tabLink("Agreement", `${base}/agreement/${id}`, false)}
                   {tabLink("History", `${base}/history/${id}`, false)}
                 </div>
               </div>
@@ -370,6 +375,20 @@ export default function NewApplicantProfilePage() {
                           ["Phone Number", w?.phone ?? "—"],
                           ["Last four of SSN", w?.ssn_last_four ?? "—"],
                           ["Hourly rate", w?.hourly_rate ? `$${w.hourly_rate}/hr` : "—"],
+                          [
+                            "Resume file",
+                            data?.requirements?.resume_url ? (
+                              <Link
+                                key="resume-link"
+                                href={`${base}/profile/resume/${id}`}
+                                className="text-teal-700 font-medium hover:underline"
+                              >
+                                View / download
+                              </Link>
+                            ) : (
+                              "—"
+                            ),
+                          ],
                         ] as const
                       ).map(([k, v]) => (
                         <div key={k} className="col-span-2 grid grid-cols-2 gap-3">
@@ -476,7 +495,11 @@ export default function NewApplicantProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                       <div className="text-sm font-semibold text-zinc-900 mb-2">Education</div>
-                      <div className="text-xs text-zinc-500">From resume (not stored on worker yet)</div>
+                      <div className="text-xs text-zinc-500">
+                        {data?.requirements?.resume_path
+                          ? "Structured education fields are not stored separately; see the uploaded resume."
+                          : "From resume (not stored on worker yet)"}
+                      </div>
                       <div className="mt-2 text-xs text-zinc-700">—</div>
                     </div>
 

@@ -6,9 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   Calendar,
+  Download,
+  Eye,
+  FileText,
   LogOut,
   Menu,
-  Phone,
   Plus,
   Settings,
   UserCheck,
@@ -17,6 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+
 type WorkerProfile = {
   id: string;
   first_name: string | null;
@@ -27,22 +30,6 @@ type WorkerProfile = {
 
 type WorkerProfileResponse = {
   worker: WorkerProfile;
-  activity: {
-    source: string;
-    created_at: string | null;
-    updated_at: string | null;
-  };
-};
-
-type ActivityTab = "Calls" | "Inbox" | "Interview";
-
-type CallLog = {
-  id: string;
-  title: string;
-  when: string;
-  duration: string;
-  outcome: "Answered" | "Did not answered";
-  attempt: string;
 };
 
 function initials(name: string) {
@@ -53,14 +40,12 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
-export default function NewApplicantActivitiesPage() {
+export default function NewApplicantAgreementPage() {
   const pathname = usePathname();
   const params = useParams<{ id: string }>();
   const applicantId = params?.id;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [active, setActive] = useState<ActivityTab>("Calls");
-  const [leftNav, setLeftNav] = useState<"Recent Logs" | "History">("Recent Logs");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [profile, setProfile] = useState<WorkerProfileResponse | null>(null);
@@ -81,13 +66,14 @@ export default function NewApplicantActivitiesPage() {
         setProfile(json);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.error("Failed to fetch applicant for activities:", msg, e);
+        console.error("Failed to fetch applicant for agreement:", msg, e);
         setLoadError(msg);
         setProfile(null);
       } finally {
         setLoading(false);
       }
     }
+
     fetchApplicant();
   }, [applicantId]);
 
@@ -100,16 +86,6 @@ export default function NewApplicantActivitiesPage() {
 
   const candidateRole = applicant?.job_role || "N/A";
   const statusLabel = applicant?.status_label?.trim() || "New Applicant";
-
-  /** No `call_logs` table yet — keep structure ready for a future API. */
-  const callLogs: CallLog[] = useMemo(() => [], []);
-
-  const historyCount = useMemo(() => {
-    const u = profile?.activity?.updated_at;
-    const c = profile?.activity?.created_at;
-    if (u && c && u !== c) return 1;
-    return 0;
-  }, [profile?.activity?.created_at, profile?.activity?.updated_at]);
 
   const tabLink = (label: string, href: string, active?: boolean) => (
     <Link
@@ -126,7 +102,6 @@ export default function NewApplicantActivitiesPage() {
 
   return (
     <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0A1F1C] text-white transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -207,7 +182,6 @@ export default function NewApplicantActivitiesPage() {
         </div>
       </div>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
@@ -238,7 +212,9 @@ export default function NewApplicantActivitiesPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">Admin - New Applicant Detailed Page - Activities</div>
+            <div className="mb-5 text-xs text-zinc-400">
+              Admin - New Applicant Detailed Page - Agreement
+            </div>
 
             {loadError ? (
               <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -247,7 +223,6 @@ export default function NewApplicantActivitiesPage() {
             ) : null}
 
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
-              {/* Top */}
               <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-teal-600 text-white flex items-center justify-center font-semibold text-sm">
@@ -272,7 +247,6 @@ export default function NewApplicantActivitiesPage() {
                 </div>
               </div>
 
-              {/* Tabs */}
               <div className="px-6 py-4 border-b border-[#9CC3FF]/20 bg-white/30">
                 <div className="flex flex-wrap gap-2">
                   {tabLink("Checklist", `/admin_recruiter/new/checklist/${applicantId}`, false)}
@@ -284,160 +258,162 @@ export default function NewApplicantActivitiesPage() {
                     false
                   )}
                   {tabLink("Authorization", `/admin_recruiter/new/authorization/${applicantId}`, false)}
-                  {tabLink("Activities", `/admin_recruiter/new/activities/${applicantId}`, true)}
+                  {tabLink("Activities", `/admin_recruiter/new/activities/${applicantId}`, false)}
                   {tabLink(
                     "Facility Assignments",
                     `/admin_recruiter/new/facility-assignments/${applicantId}`,
                     false
                   )}
-                  {tabLink("Agreement", `/admin_recruiter/new/agreement/${applicantId}`, false)}
+                  {tabLink("Agreement", `/admin_recruiter/new/agreement/${applicantId}`, true)}
                   {tabLink("History", `/admin_recruiter/new/history/${applicantId}`, false)}
                 </div>
               </div>
 
-              <div className="p-6 grid grid-cols-12 gap-6">
-                {/* Left mini-nav */}
-                <aside className="col-span-3">
-                  <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-4 h-full">
-                    <div className="space-y-2">
-                      {(
-                        [
-                          { key: "Recent Logs" as const, count: callLogs.length },
-                          { key: "History" as const, count: historyCount },
-                        ] as const
-                      ).map(({ key: k, count }) => {
-                        const isActive = leftNav === k;
-                        return (
-                          <button
-                            key={k}
-                            onClick={() => setLeftNav(k)}
-                            className={`w-full flex items-center justify-between gap-2 text-left px-3 py-2 rounded-xl border text-xs transition ${
-                              isActive
-                                ? "border-teal-200 bg-white text-zinc-900"
-                                : "border-transparent text-zinc-600 hover:bg-white"
-                            }`}
-                          >
-                            <span>{k}</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-medium">
-                              {count}
-                            </span>
-                          </button>
-                        );
-                      })}
+              <div className="p-6 space-y-8 max-w-3xl">
+                {/* 1. Agreement 1 */}
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold text-zinc-900">1. Agreement 1</div>
+                    <div className="text-xs text-zinc-500">
+                      Not uploaded <span className="font-medium text-zinc-800">0</span> of{" "}
+                      <span className="font-medium text-zinc-800">1</span>
                     </div>
                   </div>
-                </aside>
-
-                {/* Main */}
-                <main className="col-span-9">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      {(["Calls", "Inbox", "Interview"] as const).map((t) => {
-                        const isActive = active === t;
-                        return (
-                          <button
-                            key={t}
-                            onClick={() => setActive(t)}
-                            className={`text-xs px-3 py-1.5 rounded-xl border transition ${
-                              isActive
-                                ? "border-teal-200 bg-white text-zinc-900"
-                                : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
-                            }`}
-                          >
-                            {t}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition">
-                        + Add a call log
-                      </button>
-                      <button className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white/70 hover:bg-white transition flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-teal-700" />
-                        Call
-                      </button>
-                    </div>
-                  </div>
-
-                  {active !== "Calls" ? (
-                    <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-6 text-sm text-zinc-600">
-                      {active} for {candidateName} — connect an inbox or interview data source to show items
-                      here.
-                    </div>
-                  ) : leftNav === "History" ? (
-                    <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-6 text-sm text-zinc-600">
-                      {historyCount > 0 ? (
-                        <p>
-                          Last profile update tracked from onboarding activity. Full history export can be
-                          wired when activity events are stored per worker.
+                  <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/80 p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-teal-600/10 flex items-center justify-center shrink-0">
+                        <FileText className="w-6 h-6 text-teal-700" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-zinc-900">Agreement 1</div>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Placeholder for the first agreement package. Connect storage or e-sign when ready.
                         </p>
-                      ) : (
-                        <p>No history entries yet.</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="text-sm font-semibold text-zinc-900">Call History</div>
-                        <div className="text-xs text-zinc-500">
-                          Actions taken{" "}
-                          <span className="font-medium text-zinc-800">{callLogs.length}</span>
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          <button
+                            type="button"
+                            className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition"
+                          >
+                            Request to Upload
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs px-4 py-2 rounded-2xl border border-zinc-200 bg-white hover:bg-zinc-50 transition"
+                          >
+                            Reject
+                          </button>
                         </div>
                       </div>
-
-                      {callLogs.length === 0 ? (
-                        <div className="text-sm text-zinc-500 py-10 text-center border border-dashed border-zinc-200 rounded-2xl">
-                          No call logs recorded for{" "}
-                          <span className="font-medium text-zinc-700">{candidateName}</span> yet. Call logs
-                          can be stored in a future call-log table and loaded here.
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {callLogs.map((c) => {
-                            const badge =
-                              c.outcome === "Answered"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-rose-100 text-rose-800";
-                            return (
-                              <div
-                                key={c.id}
-                                className="grid grid-cols-12 gap-4 items-center py-3 border-b border-zinc-100 last:border-b-0"
-                              >
-                                <div className="col-span-6 flex items-start gap-3">
-                                  <div className="w-9 h-9 rounded-full bg-teal-600/10 flex items-center justify-center shrink-0">
-                                    <Phone className="w-4 h-4 text-teal-700" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="text-xs font-medium text-zinc-900 truncate">
-                                      {c.title}
-                                    </div>
-                                    <div className="text-[11px] text-zinc-500">{c.when}</div>
-                                  </div>
-                                </div>
-
-                                <div className="col-span-2 text-[11px] text-zinc-500">
-                                  Duration: {c.duration}
-                                </div>
-
-                                <div className="col-span-2">
-                                  <span
-                                    className={`text-[11px] px-3 py-1 rounded-full font-medium ${badge}`}
-                                  >
-                                    {c.outcome}
-                                  </span>
-                                </div>
-
-                                <div className="col-span-2 text-[11px] text-zinc-500">{c.attempt}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
                     </div>
-                  )}
-                </main>
+                  </div>
+                </section>
+
+                {/* 2. Employee Agreement W2 */}
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold text-zinc-900">2. Employee Agreement W2</div>
+                    <div className="text-xs text-zinc-500">
+                      Signed <span className="font-medium text-zinc-800">1</span> of{" "}
+                      <span className="font-medium text-zinc-800">1</span>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-[#9CC3FF]/30 bg-white/90 p-5">
+                    <div className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-white border border-teal-200 flex items-center justify-center text-[10px] font-semibold text-teal-800 shrink-0">
+                          PDF
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-teal-800 truncate">
+                            Employee Agreement W2.pdf
+                          </div>
+                          <div className="text-[11px] text-zinc-500">7.23 MB</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 justify-end">
+                        <span className="text-[11px] px-3 py-1 rounded-full bg-teal-600 text-white font-medium">
+                          Signed
+                        </span>
+                        <button
+                          type="button"
+                          className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center"
+                          aria-label="View"
+                        >
+                          <Eye className="w-4 h-4 text-teal-700" />
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition"
+                        >
+                          Approved
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs px-4 py-2 rounded-2xl border border-teal-600 text-teal-700 hover:bg-teal-50 transition"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 3. I9 Form */}
+                <section>
+                  <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div className="text-sm font-semibold text-zinc-900">3. I9 Form</div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-xs text-zinc-500">
+                        Uploaded <span className="font-medium text-zinc-800">1</span> of{" "}
+                        <span className="font-medium text-zinc-800">1</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center"
+                        aria-label="View"
+                      >
+                        <Eye className="w-4 h-4 text-teal-700" />
+                      </button>
+                      <a
+                        href="#"
+                        className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center"
+                        aria-label="Download"
+                      >
+                        <Download className="w-4 h-4 text-teal-700" />
+                      </a>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-[#9CC3FF]/30 bg-white/90 p-5">
+                    <div className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-white border border-teal-200 flex items-center justify-center text-[10px] font-semibold text-teal-800 shrink-0">
+                          PDF
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-teal-800 truncate">I9 Form.pdf</div>
+                          <div className="text-[11px] text-zinc-500">5.23 MB</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 justify-end">
+                        <span className="text-[11px] px-3 py-1 rounded-full border border-teal-600 text-teal-700 font-medium bg-white">
+                          Unsigned
+                        </span>
+                        <button
+                          type="button"
+                          className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition"
+                        >
+                          Request to Upload
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs px-4 py-2 rounded-2xl border border-teal-600 text-teal-700 hover:bg-teal-50 transition"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
@@ -446,4 +422,3 @@ export default function NewApplicantActivitiesPage() {
     </div>
   );
 }
-

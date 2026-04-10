@@ -18,8 +18,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "NA";
@@ -35,6 +33,11 @@ type WorkerProfile = {
   job_role: string | null;
 };
 
+type WorkerProfileApi = {
+  worker: WorkerProfile;
+  skillAssessments: { completed: number; total: number };
+};
+
 type Assessment = {
   title: string;
   score: string;
@@ -47,25 +50,39 @@ export default function NewApplicantSkillAssessmentsPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [skillProgress, setSkillProgress] = useState<{ completed: number; total: number } | null>(
+    null
+  );
 
   useEffect(() => {
     async function fetchApplicant() {
       if (!applicantId) return;
       setLoading(true);
+      setLoadError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role")
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(
+          `/api/admin/worker-profile?workerId=${encodeURIComponent(applicantId)}`
+        );
+        const json = (await res.json()) as WorkerProfileApi & { error?: string };
+        if (!res.ok) {
+          throw new Error(json.error || `Failed to load profile (${res.status})`);
+        }
+        const w = json.worker;
+        setApplicant({
+          id: w.id,
+          first_name: w.first_name,
+          last_name: w.last_name,
+          job_role: w.job_role,
+        });
+        setSkillProgress(json.skillAssessments ?? null);
       } catch (e) {
-        console.error("Failed to fetch applicant for skill assessments:", e);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("Failed to fetch applicant for skill assessments:", msg, e);
+        setLoadError(msg);
         setApplicant(null);
+        setSkillProgress(null);
       } finally {
         setLoading(false);
       }
@@ -227,6 +244,12 @@ export default function NewApplicantSkillAssessmentsPage() {
               Admin - New Applicant Detailed Page - Skill Assessments
             </div>
 
+            {loadError ? (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {loadError}
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
               {/* Top */}
               <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
@@ -247,7 +270,9 @@ export default function NewApplicantSkillAssessmentsPage() {
                     New Applicant
                   </span>
                   <div className="hidden sm:block text-xs text-zinc-500 font-medium">
-                    Completed 6 of 6
+                    {skillProgress && skillProgress.total > 0
+                      ? `Completed ${skillProgress.completed} of ${skillProgress.total}`
+                      : "Assessments —"}
                   </div>
                   <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
@@ -282,6 +307,7 @@ export default function NewApplicantSkillAssessmentsPage() {
                     `/admin_recruiter/new/facility-assignments/${applicantId}`,
                     false
                   )}
+                  {tabLink("Agreement", `/admin_recruiter/new/agreement/${applicantId}`, false)}
                   {tabLink("History", `/admin_recruiter/new/history/${applicantId}`, false)}
                 </div>
               </div>

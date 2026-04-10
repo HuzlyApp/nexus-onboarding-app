@@ -89,7 +89,10 @@ export default function NewCandidatesPage() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [rows, setRows] = useState<CandidateRow[]>([]);
+  const [totalFromApi, setTotalFromApi] = useState<number | null>(null);
   const [query, setQuery] = useState("");
+  const [jobRoleFilter, setJobRoleFilter] = useState<string>("");
+  const [locationFilter, setLocationFilter] = useState<string>("");
 
   type ColumnKey = "name" | "status" | "reference" | "role" | "createdAt" | "location" | "checklist";
   const allColumns = useMemo(
@@ -131,10 +134,12 @@ export default function NewCandidatesPage() {
       const res = await fetch("/api/workers?status=new", { cache: "no-store" });
       const json = (await res.json().catch(() => ({}))) as {
         workers?: WorkerProfile[];
+        total?: number;
         error?: string;
       };
       if (!res.ok) throw new Error(json.error || "Failed to load workers");
       const data = Array.isArray(json.workers) ? json.workers : [];
+      setTotalFromApi(typeof json.total === "number" ? json.total : data.length);
 
       const mapped: CandidateRow[] = (data ?? []).map((p) => {
         const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "Unnamed";
@@ -155,6 +160,7 @@ export default function NewCandidatesPage() {
       console.error("Failed to fetch new candidates:", e);
       setFetchError(e instanceof Error ? e.message : "Failed to load applicants");
       setRows([]);
+      setTotalFromApi(null);
     } finally {
       setLoading(false);
     }
@@ -164,18 +170,47 @@ export default function NewCandidatesPage() {
     void loadNewApplicants();
   }, []);
 
+  const jobRoleOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) {
+      if (r.role && r.role !== "N/A") s.add(r.role);
+    }
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const locationOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) {
+      if (r.location && r.location !== "—") s.add(r.location);
+    }
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
   const filtered = useMemo(() => {
+    let out = rows;
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
-      return (
-        r.name.toLowerCase().includes(q) ||
-        r.role.toLowerCase().includes(q) ||
-        r.location.toLowerCase().includes(q) ||
-        r.reference.toLowerCase().includes(q)
-      );
-    });
-  }, [rows, query]);
+    if (q) {
+      out = out.filter((r) => {
+        return (
+          r.name.toLowerCase().includes(q) ||
+          r.role.toLowerCase().includes(q) ||
+          r.location.toLowerCase().includes(q) ||
+          r.reference.toLowerCase().includes(q)
+        );
+      });
+    }
+    if (jobRoleFilter) {
+      out = out.filter((r) => r.role === jobRoleFilter);
+    }
+    if (locationFilter) {
+      out = out.filter((r) => r.location === locationFilter);
+    }
+    return out;
+  }, [rows, query, jobRoleFilter, locationFilter]);
+
+  const filterActive = Boolean(
+    query.trim() || jobRoleFilter || locationFilter
+  );
 
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden">
@@ -325,33 +360,67 @@ export default function NewCandidatesPage() {
             <div className="px-6 py-4 border-b border-zinc-100 flex flex-wrap gap-3 items-center justify-between">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="text-sm text-zinc-500">
-                  Total: <span className="font-medium text-zinc-800">{filtered.length}</span>{" "}
-                  applicants
+                  <span className="font-medium text-zinc-800">
+                    {loading ? "—" : totalFromApi ?? rows.length}
+                  </span>{" "}
+                  in pipeline
+                  {filterActive ? (
+                    <>
+                      {" "}
+                      · Showing{" "}
+                      <span className="font-medium text-zinc-800">{filtered.length}</span> match
+                      {filtered.length === 1 ? "" : "es"}
+                    </>
+                  ) : null}
                 </div>
                 <div className="h-5 w-px bg-zinc-200 hidden sm:block" />
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-zinc-400">Type</span>
-                  <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
+                  <span className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700">
                     Candidates
-                  </button>
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-zinc-400">Status</span>
-                  <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
+                  <span className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700">
                     New
-                  </button>
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Job Role</span>
-                  <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
-                    All
-                  </button>
+                  <label htmlFor="filter-job-role" className="text-xs text-zinc-400">
+                    Job Role
+                  </label>
+                  <select
+                    id="filter-job-role"
+                    value={jobRoleFilter}
+                    onChange={(e) => setJobRoleFilter(e.target.value)}
+                    className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 max-w-[160px]"
+                  >
+                    <option value="">All</option>
+                    {jobRoleOptions.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Location</span>
-                  <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
-                    All
-                  </button>
+                  <label htmlFor="filter-location" className="text-xs text-zinc-400">
+                    Location
+                  </label>
+                  <select
+                    id="filter-location"
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 max-w-[180px]"
+                  >
+                    <option value="">All</option>
+                    {locationOptions.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -426,15 +495,20 @@ export default function NewCandidatesPage() {
                             if (k === "name") {
                               return (
                                 <td key={k} className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-semibold">
+                                  <Link
+                                    href={`/admin_recruiter/new/profile/${r.id}`}
+                                    className="flex items-center gap-3 group"
+                                  >
+                                    <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
                                       {initials(r.name)}
                                     </div>
-                                    <div className="min-w-0">
-                                      <div className="font-medium text-zinc-900 truncate">{r.name}</div>
+                                    <div className="min-w-0 text-left">
+                                      <div className="font-medium text-zinc-900 truncate group-hover:text-teal-800 group-hover:underline">
+                                        {r.name}
+                                      </div>
                                       <div className="text-xs text-zinc-400">Candidates</div>
                                     </div>
-                                  </div>
+                                  </Link>
                                 </td>
                               );
                             }

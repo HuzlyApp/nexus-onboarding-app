@@ -6,30 +6,29 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   LogOut,
   Menu,
-  RefreshCw,
-  Search,
   Settings,
   UserCheck,
   UserPlus,
   UserX,
   Users,
   X,
-  ZoomIn,
-  ZoomOut,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
-type WorkerProfile = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  job_role: string | null;
-  city: string | null;
-  state: string | null;
+type WorkerProfilePayload = {
+  worker: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    job_role: string | null;
+    city: string | null;
+    state: string | null;
+  };
+  requirements: {
+    resume_path: string | null;
+    resume_url: string | null;
+  } | null;
 };
 
 function initials(name: string) {
@@ -40,85 +39,10 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
-function ResumeViewer() {
-  return (
-    <div className="bg-[#2A2A2A] rounded-2xl overflow-hidden border border-black/10">
-      <div className="h-12 flex items-center gap-3 px-4 text-white/85 bg-black/15">
-        <button className="w-8 h-8 rounded-xl hover:bg-white/10 grid place-items-center">
-          <Search className="w-4 h-4" />
-        </button>
-        <button className="w-8 h-8 rounded-xl hover:bg-white/10 grid place-items-center">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <button className="w-8 h-8 rounded-xl hover:bg-white/10 grid place-items-center">
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
-        <div className="text-xs opacity-80">1 of 2</div>
-
-        <div className="ml-auto flex items-center gap-1">
-          <button className="w-8 h-8 rounded-xl hover:bg-white/10 grid place-items-center">
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <button className="w-8 h-8 rounded-xl hover:bg-white/10 grid place-items-center">
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <div className="text-xs opacity-80 px-2">Automatic Zoom</div>
-          <button className="w-8 h-8 rounded-xl hover:bg-white/10 grid place-items-center">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="p-8 grid place-items-center">
-        <div className="w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden">
-          <div className="p-10">
-            <div className="text-2xl font-bold tracking-tight">RESUME PREVIEW</div>
-            <div className="mt-2 text-xs text-zinc-500 max-w-xl">
-              This is a UI placeholder. Wire this to the uploaded resume file when available.
-            </div>
-
-            <div className="mt-6 grid grid-cols-12 gap-6 text-[11px] leading-5 text-zinc-700">
-              <div className="col-span-4">
-                <div className="font-semibold text-zinc-900">CONTACT</div>
-                <div className="mt-2 space-y-1 text-zinc-600">
-                  <div>—</div>
-                  <div>—</div>
-                  <div>—</div>
-                </div>
-
-                <div className="mt-6 font-semibold text-zinc-900">SKILLS</div>
-                <ul className="mt-2 space-y-1 text-zinc-600 list-disc pl-4">
-                  <li>Patient care</li>
-                  <li>Documentation</li>
-                  <li>Team collaboration</li>
-                </ul>
-              </div>
-
-              <div className="col-span-8">
-                <div className="font-semibold text-zinc-900">SUMMARY</div>
-                <p className="mt-2 text-zinc-600">
-                  Resume content will be rendered here once connected to uploads.
-                </p>
-
-                <div className="mt-5 font-semibold text-zinc-900">WORK HISTORY</div>
-                <div className="mt-2 space-y-3 text-zinc-600">
-                  <div>
-                    <div className="font-medium text-zinc-800">—</div>
-                    <div className="text-zinc-500">—</div>
-                  </div>
-                  <div>
-                    <div className="font-medium text-zinc-800">—</div>
-                    <div className="text-zinc-500">—</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function fileLabel(path: string | null | undefined) {
+  if (!path?.trim()) return "resume";
+  const seg = path.split("/").pop() || path;
+  return seg;
 }
 
 export default function NewApplicantProfileResumePage() {
@@ -130,45 +54,52 @@ export default function NewApplicantProfileResumePage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<WorkerProfilePayload | null>(null);
 
   useEffect(() => {
-    async function fetchApplicant() {
+    async function run() {
       if (!applicantId) return;
       setLoading(true);
+      setError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role, city, state")
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(
+          `/api/admin/worker-profile?workerId=${encodeURIComponent(applicantId)}`
+        );
+        const json = (await res.json()) as WorkerProfilePayload & { error?: string };
+        if (!res.ok) throw new Error(json.error || "Failed to load profile");
+        setProfile(json);
       } catch (e) {
-        console.error("Failed to fetch applicant profile:", e);
-        setApplicant(null);
+        console.error(e);
+        setError(e instanceof Error ? e.message : "Failed to load");
+        setProfile(null);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchApplicant();
+    run();
   }, [applicantId]);
 
-  const candidateName = useMemo(() => {
-    const n = `${applicant?.first_name ?? ""} ${applicant?.last_name ?? ""}`.trim();
-    return n || (isWorkerRoute ? "Worker" : "Applicant");
-  }, [applicant, isWorkerRoute]);
+  const w = profile?.worker;
+  const resumePath = profile?.requirements?.resume_path ?? null;
+  const resumeUrl = profile?.requirements?.resume_url ?? null;
 
-  const candidateRole = applicant?.job_role || "N/A";
+  const candidateName = useMemo(() => {
+    const n = `${w?.first_name ?? ""} ${w?.last_name ?? ""}`.trim();
+    return n || (isWorkerRoute ? "Worker" : "Applicant");
+  }, [w?.first_name, w?.last_name, isWorkerRoute]);
+
+  const candidateRole = w?.job_role || "N/A";
   const candidateLocation = useMemo(() => {
-    const parts = [applicant?.city ?? "", applicant?.state ?? ""].filter(Boolean);
+    const parts = [w?.city ?? "", w?.state ?? ""].filter(Boolean);
     return parts.length ? parts.join(", ") : "—";
-  }, [applicant?.city, applicant?.state]);
+  }, [w?.city, w?.state]);
 
   const candidateStatus = isWorkerRoute ? "Worker" : "New Applicant";
+
+  const isPdf =
+    resumePath?.toLowerCase().endsWith(".pdf") ||
+    resumeUrl?.toLowerCase().includes(".pdf");
 
   const tabLink = (label: string, href: string, active?: boolean) => (
     <Link
@@ -220,7 +151,6 @@ export default function NewApplicantProfileResumePage() {
 
   return (
     <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0A1F1C] text-white transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -277,7 +207,6 @@ export default function NewApplicantProfileResumePage() {
         </div>
       </div>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-3">
@@ -335,7 +264,6 @@ export default function NewApplicantProfileResumePage() {
               </button>
             </div>
 
-            {/* Tabs */}
             <div className="px-6 py-4 border-b border-[#9CC3FF]/20 bg-white/30">
               <div className="flex flex-wrap gap-2">
                 {tabLink("Checklist", `${basePrefix}/checklist`, false)}
@@ -349,7 +277,6 @@ export default function NewApplicantProfileResumePage() {
               </div>
             </div>
 
-            {/* Profile subtabs */}
             <div className="px-6 py-4">
               <div className="inline-flex items-center gap-2 bg-white/70 border border-zinc-200 rounded-3xl p-1">
                 {subTabLink("Details", detailsHref, false)}
@@ -359,7 +286,68 @@ export default function NewApplicantProfileResumePage() {
             </div>
 
             <div className="px-6 pb-6">
-              <ResumeViewer />
+              {error ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {error}
+                </div>
+              ) : null}
+
+              {!loading && !error && !resumePath ? (
+                <div className="rounded-2xl border border-zinc-200 bg-white/80 px-5 py-8 text-center text-sm text-zinc-600">
+                  No resume found in{" "}
+                  <span className="font-mono text-xs text-zinc-500">worker_requirements.resume_path</span>{" "}
+                  for this applicant. Upload a resume during onboarding (step 1) to store it.
+                </div>
+              ) : null}
+
+              {!loading && !error && resumePath && !resumeUrl ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+                  A path is stored (<span className="font-mono text-xs break-all">{resumePath}</span>) but a
+                  signed URL could not be created. Check that the file exists in the{" "}
+                  <span className="font-mono">worker-resumes</span> bucket and service role storage access.
+                </div>
+              ) : null}
+
+              {!loading && resumeUrl ? (
+                <div className="bg-[#2A2A2A] rounded-2xl overflow-hidden border border-black/10">
+                  <div className="h-11 flex items-center px-4 text-white/85 bg-black/15 text-xs justify-between">
+                    <span className="truncate">{fileLabel(resumePath)}</span>
+                    <a
+                      href={resumeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-teal-300 hover:text-white underline"
+                    >
+                      Open in new tab
+                    </a>
+                  </div>
+                  {isPdf ? (
+                    <iframe
+                      title="Resume PDF"
+                      src={resumeUrl}
+                      className="w-full min-h-[72vh] bg-zinc-100"
+                    />
+                  ) : (
+                    <div className="p-8 text-center text-white/90 text-sm">
+                      <p className="mb-4">Preview is available for PDF files. This file is not a PDF.</p>
+                      <a
+                        href={resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-xl bg-teal-600 hover:bg-teal-500 px-5 py-2.5 font-medium"
+                      >
+                        Download {fileLabel(resumePath)}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {loading ? (
+                <div className="rounded-2xl border border-zinc-200 bg-white/60 px-5 py-12 text-center text-sm text-zinc-500">
+                  Loading resume…
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -367,4 +355,3 @@ export default function NewApplicantProfileResumePage() {
     </div>
   );
 }
-

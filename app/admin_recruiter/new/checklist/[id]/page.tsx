@@ -152,6 +152,7 @@ export default function NewApplicantChecklistPage() {
     "Authorization",
     "Activities",
     "Facility Assignments",
+    "Agreement",
     "History",
   ] as const;
 
@@ -171,6 +172,8 @@ export default function NewApplicantChecklistPage() {
         return `/admin_recruiter/new/activities/${applicantId}`;
       case "Facility Assignments":
         return `/admin_recruiter/new/facility-assignments/${applicantId}`;
+      case "Agreement":
+        return `/admin_recruiter/new/agreement/${applicantId}`;
       case "History":
         return `/admin_recruiter/new/history/${applicantId}`;
       default:

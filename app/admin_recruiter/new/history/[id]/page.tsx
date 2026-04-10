@@ -3,14 +3,35 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
-import { CheckCircle2, Calendar, LogOut, Menu, Settings, UserCheck, UserPlus, UserX, Users, X } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import {
+  Briefcase,
+  Calendar,
+  CheckCircle2,
+  LogOut,
+  Menu,
+  Settings,
+  UserCheck,
+  UserPlus,
+  UserX,
+  Users,
+  X,
+} from "lucide-react";
 
 type WorkerProfile = {
   id: string;
   first_name: string | null;
   last_name: string | null;
   job_role: string | null;
+  status_label?: string;
+};
+
+type ProfilePayload = {
+  worker: WorkerProfile;
+  activity: {
+    source: string;
+    created_at: string | null;
+    updated_at: string | null;
+  };
 };
 
 function initials(name: string) {
@@ -21,6 +42,41 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
+function formatRelative(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const diff = Date.now() - d.getTime();
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "Just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return hrs === 1 ? "1 hour ago" : `${hrs} hours ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 14) return days === 1 ? "1 day ago" : `${days} days ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 8) return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
+  const months = Math.floor(days / 30);
+  return months <= 1 ? "1 month ago" : `${months} months ago`;
+}
+
+function formatDateTimeParts(iso: string): { dateLine: string; timeLine: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return { dateLine: "—", timeLine: "—" };
+  }
+  const dateLine = d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const timeLine = d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return { dateLine, timeLine };
+}
+
 type HistoryItem = {
   id: string;
   action: string;
@@ -29,6 +85,46 @@ type HistoryItem = {
   time: string;
 };
 
+function buildHistoryFromActivity(activity: ProfilePayload["activity"] | undefined): HistoryItem[] {
+  if (!activity) return [];
+
+  type Row = { id: string; action: string; at: string };
+  const rows: Row[] = [];
+
+  if (activity.created_at?.trim()) {
+    rows.push({
+      id: "created",
+      action: "Applicant record created",
+      at: activity.created_at.trim(),
+    });
+  }
+
+  if (activity.updated_at?.trim()) {
+    const u = activity.updated_at.trim();
+    const c = activity.created_at?.trim();
+    if (!c || u !== c) {
+      rows.push({
+        id: "updated",
+        action: "Applicant profile updated",
+        at: u,
+      });
+    }
+  }
+
+  rows.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+  return rows.map((r) => {
+    const { dateLine, timeLine } = formatDateTimeParts(r.at);
+    return {
+      id: r.id,
+      action: r.action,
+      ago: formatRelative(r.at),
+      date: dateLine,
+      time: timeLine,
+    };
+  });
+}
+
 export default function NewApplicantHistoryPage() {
   const pathname = usePathname();
   const params = useParams<{ id: string }>();
@@ -36,24 +132,28 @@ export default function NewApplicantHistoryPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [applicant, setApplicant] = useState<WorkerProfile | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ProfilePayload | null>(null);
 
   useEffect(() => {
     async function fetchApplicant() {
       if (!applicantId) return;
       setLoading(true);
+      setLoadError(null);
       try {
-        const { data, error } = await supabase
-          .from("worker_profiles")
-          .select("id, first_name, last_name, job_role")
-          .eq("id", applicantId)
-          .single()
-          .returns<WorkerProfile>();
-        if (error) throw error;
-        setApplicant(data);
+        const res = await fetch(
+          `/api/admin/worker-profile?workerId=${encodeURIComponent(applicantId)}`
+        );
+        const json = (await res.json()) as ProfilePayload & { error?: string };
+        if (!res.ok) {
+          throw new Error(json.error || `Failed to load profile (${res.status})`);
+        }
+        setProfile(json);
       } catch (e) {
-        console.error("Failed to fetch applicant for history:", e);
-        setApplicant(null);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("Failed to fetch applicant for history:", msg, e);
+        setLoadError(msg);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -61,53 +161,22 @@ export default function NewApplicantHistoryPage() {
     fetchApplicant();
   }, [applicantId]);
 
+  const applicant = profile?.worker ?? null;
+
   const candidateName = useMemo(() => {
     const n = `${applicant?.first_name ?? ""} ${applicant?.last_name ?? ""}`.trim();
     return n || "Applicant";
   }, [applicant]);
 
   const candidateRole = applicant?.job_role || "N/A";
+  const statusLabel = applicant?.status_label?.trim() || "New Applicant";
 
   const historyItems: HistoryItem[] = useMemo(
-    () => [
-      {
-        id: "h1",
-        action: "Nexus Med Pro Added Activity Test",
-        ago: "1 week ago",
-        date: "02/3/2026",
-        time: "3:30PM",
-      },
-      {
-        id: "h2",
-        action: "Nexus Med Pro Added Activity Test",
-        ago: "1 week ago",
-        date: "02/3/2026",
-        time: "3:30PM",
-      },
-      {
-        id: "h3",
-        action: "Nexus Med Pro Added Activity Test",
-        ago: "1 week ago",
-        date: "02/3/2026",
-        time: "3:30PM",
-      },
-      {
-        id: "h4",
-        action: "Nexus Med Pro Added Activity Test",
-        ago: "1 week ago",
-        date: "02/3/2026",
-        time: "3:30PM",
-      },
-      {
-        id: "h5",
-        action: "Nexus Med Pro Added Activity Test",
-        ago: "1 week ago",
-        date: "02/3/2026",
-        time: "3:30PM",
-      },
-    ],
-    []
+    () => buildHistoryFromActivity(profile?.activity),
+    [profile?.activity]
   );
+
+  const historyCount = historyItems.length;
 
   const tabLink = (label: string, href: string, active?: boolean) => (
     <Link
@@ -122,11 +191,8 @@ export default function NewApplicantHistoryPage() {
     </Link>
   );
 
-  const historyCount = historyItems.length;
-
   return (
     <div className="flex min-h-screen bg-zinc-50 overflow-hidden">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0A1F1C] text-white transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -164,7 +230,7 @@ export default function NewApplicantHistoryPage() {
               { label: "Pending", href: "/admin_recruiter/pending", icon: UserCheck },
               { label: "Approved", href: "/admin_recruiter/approved", icon: UserCheck },
               { label: "Disapproved", href: "/admin_recruiter/disapproved", icon: UserX },
-              { label: "Workers", href: "/admin_recruiter/workers", icon: Users },
+              { label: "Workers", href: "/admin_recruiter/workers", icon: Briefcase },
               { label: "Schedule", href: "/admin_recruiter/schedule", icon: Calendar },
             ].map((item) => {
               const Icon = item.icon;
@@ -198,7 +264,6 @@ export default function NewApplicantHistoryPage() {
         </div>
       </div>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
@@ -227,6 +292,12 @@ export default function NewApplicantHistoryPage() {
           <div className="max-w-[1320px] mx-auto">
             <div className="mb-5 text-xs text-zinc-400">Admin - New Applicant Detailed Page - History</div>
 
+            {loadError ? (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {loadError}
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-[#9CC3FF] overflow-hidden shadow-sm bg-[linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:34px_34px] bg-white/70">
               <div className="p-6 flex items-start justify-between gap-6 border-b border-[#9CC3FF]/30 bg-white/40">
                 <div className="flex items-center gap-4">
@@ -234,12 +305,14 @@ export default function NewApplicantHistoryPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">{loading ? "Loading..." : candidateName}</div>
+                    <div className="text-lg font-semibold text-zinc-900">
+                      {loading ? "Loading..." : candidateName}
+                    </div>
                     <div className="text-xs text-zinc-500">{candidateRole}</div>
                   </div>
                 </div>
                 <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
-                  New Applicant
+                  {loading ? "…" : statusLabel}
                 </span>
               </div>
 
@@ -252,6 +325,7 @@ export default function NewApplicantHistoryPage() {
                   {tabLink("Authorization", `/admin_recruiter/new/authorization/${applicantId}`, false)}
                   {tabLink("Activities", `/admin_recruiter/new/activities/${applicantId}`, false)}
                   {tabLink("Facility Assignments", `/admin_recruiter/new/facility-assignments/${applicantId}`, false)}
+                  {tabLink("Agreement", `/admin_recruiter/new/agreement/${applicantId}`, false)}
                   {tabLink("History", `/admin_recruiter/new/history/${applicantId}`, true)}
                 </div>
               </div>
@@ -260,24 +334,42 @@ export default function NewApplicantHistoryPage() {
                 <section className="col-span-12">
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-sm font-semibold text-zinc-900">
-                      Actions taken <span className="text-zinc-700">{historyCount}</span>
+                      Actions taken{" "}
+                      <span className="text-zinc-700">{loading ? "—" : historyCount}</span>
                     </div>
                   </div>
 
-                  <div className="mt-2 space-y-3">
-                    {historyItems.map((h) => (
-                      <div key={h.id} className="grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-6 flex items-start gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-teal-700 mt-0.5" />
-                          <div className="text-xs text-zinc-700">{h.action}</div>
+                  {loading ? (
+                    <div className="text-sm text-zinc-500 py-6">Loading history…</div>
+                  ) : historyCount === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/60 px-6 py-10 text-center text-sm text-zinc-500">
+                      No history events yet. When a dedicated activity log is stored per worker, entries will
+                      appear here. For now, record creation and profile updates are shown when timestamps are
+                      available.
+                    </div>
+                  ) : (
+                    <div className="mt-2 space-y-3">
+                      {historyItems.map((h) => (
+                        <div
+                          key={h.id}
+                          className="grid grid-cols-12 gap-4 items-center border-b border-zinc-100 pb-3 last:border-b-0 last:pb-0"
+                        >
+                          <div className="col-span-6 sm:col-span-7 flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full bg-teal-600/10 flex items-center justify-center shrink-0">
+                              <CheckCircle2 className="w-4 h-4 text-teal-700" />
+                            </div>
+                            <div className="text-xs text-zinc-700">{h.action}</div>
+                          </div>
+                          <div className="col-span-6 sm:col-span-5 text-right sm:text-right">
+                            <div className="text-[11px] text-zinc-500">
+                              {h.ago} <span className="text-zinc-300">•</span> {h.date}{" "}
+                              <span className="text-zinc-300">•</span> {h.time}
+                            </div>
+                          </div>
                         </div>
-                        <div className="col-span-6 text-right">
-                          <div className="text-[11px] text-zinc-500">{h.ago}</div>
-                          <div className="text-[11px] text-zinc-500">{h.date} - {h.time}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </div>
             </div>
@@ -287,4 +379,3 @@ export default function NewApplicantHistoryPage() {
     </div>
   );
 }
-
