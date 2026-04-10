@@ -10,7 +10,9 @@ type Body = {
   tb_test_url?: string | null
   cpr_certification_url?: string | null
   ssn_url?: string | null
+  ssn_back_url?: string | null
   drivers_license_url?: string | null
+  drivers_license_back_url?: string | null
 }
 
 const URL_KEYS = [
@@ -18,7 +20,9 @@ const URL_KEYS = [
   "tb_test_url",
   "cpr_certification_url",
   "ssn_url",
+  "ssn_back_url",
   "drivers_license_url",
+  "drivers_license_back_url",
 ] as const
 
 export async function POST(req: NextRequest) {
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
     const { data: existingRows, error: selErr } = await supabase
       .from("worker_documents")
       .select(
-        "id, nursing_license_url, tb_test_url, cpr_certification_url, ssn_url, drivers_license_url"
+        "id, nursing_license_url, tb_test_url, cpr_certification_url, ssn_url, ssn_back_url, drivers_license_url, drivers_license_back_url"
       )
       .eq("worker_id", worker.id)
       .limit(1)

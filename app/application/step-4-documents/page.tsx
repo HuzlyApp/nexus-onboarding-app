@@ -1,23 +1,47 @@
 // app/application/step-4-documents/page.tsx
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronRight } from "lucide-react"
+import Image from "next/image"
+import { FileText, Trash2 } from "lucide-react"
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser"
+import { WORKER_REQUIRED_FILES_BUCKET } from "@/lib/supabase-storage-buckets"
 import OnboardingStepper from "@/app/components/OnboardingStepper"
 
 const DISCLAIMER =
   "By selecting “I Agree,” I authorize the Company to conduct a background check and, if required, a drug screening as part of my application or continued engagement. I understand this may include verification of my identity, employment history, education, and criminal records as permitted by law. I consent to the lawful collection, use, and disclosure of this information and release the Company from liability related to these authorized checks."
+
+type IdentityPaths = {
+  ssnFront: string | null
+  ssnBack: string | null
+  dlFront: string | null
+  dlBack: string | null
+}
+
+function fileLabel(path: string) {
+  const seg = path.split("/").pop() || path
+  return seg.length > 40 ? `${seg.slice(0, 18)}…${seg.slice(-12)}` : seg
+}
+
+function isPdfPath(path: string) {
+  return /\.pdf$/i.test(path)
+}
 
 export default function DocumentsPage() {
   const router = useRouter()
 
   const [applicantId, setApplicantId] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
-  const [identityDocsComplete, setIdentityDocsComplete] = useState(false)
+  const [identityPaths, setIdentityPaths] = useState<IdentityPaths>({
+    ssnFront: null,
+    ssnBack: null,
+    dlFront: null,
+    dlBack: null,
+  })
   const [error, setError] = useState<string | null>(null)
   const [zohoNote, setZohoNote] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const [signerEmail, setSignerEmail] = useState("")
   const [signerName, setSignerName] = useState("")
@@ -26,8 +50,12 @@ export default function DocumentsPage() {
   const [signingLoading, setSigningLoading] = useState(false)
   const [envelopeId, setEnvelopeId] = useState<string | null>(null)
   const [isSigned, setIsSigned] = useState(false)
-  /** Zoho omits redirect on http://localhost; user confirms completion here. */
   const [signingCompleteManual, setSigningCompleteManual] = useState(false)
+
+  const identityDocsComplete = useMemo(() => {
+    const { ssnFront, ssnBack, dlFront, dlBack } = identityPaths
+    return Boolean(ssnFront && ssnBack && dlFront && dlBack)
+  }, [identityPaths])
 
   useEffect(() => {
     const id = localStorage.getItem("applicantId")
@@ -70,19 +98,34 @@ export default function DocumentsPage() {
 
   const refreshIdentityDocsStatus = useCallback(async () => {
     if (!applicantId) return
-    const { data: w } = await supabase.from("worker").select("id").eq("user_id", applicantId).maybeSingle()
-    if (!w?.id) {
-      setIdentityDocsComplete(false)
+    const res = await fetch(
+      `/api/onboarding/worker-requirements?applicantId=${encodeURIComponent(applicantId)}`
+    )
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: string
+      requirements?: {
+        ssn_card_front_path?: string | null
+        ssn_card_back_path?: string | null
+        drivers_license_front_path?: string | null
+        drivers_license_back_path?: string | null
+        ssn_card_path?: string | null
+        drivers_license_path?: string | null
+      } | null
+    }
+    if (!res.ok) {
+      console.error("[step-4-documents] worker-requirements api", json)
       return
     }
-    const { data: docs } = await supabase
-      .from("worker_documents")
-      .select("ssn_url, drivers_license_url")
-      .eq("worker_id", w.id)
-      .maybeSingle()
-    const s = docs?.ssn_url?.trim()
-    const d = docs?.drivers_license_url?.trim()
-    setIdentityDocsComplete(Boolean(s && d))
+    const req = json.requirements ?? null
+
+    const t = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null)
+
+    setIdentityPaths({
+      ssnFront: t(req?.ssn_card_front_path) ?? t(req?.ssn_card_path),
+      ssnBack: t(req?.ssn_card_back_path),
+      dlFront: t(req?.drivers_license_front_path) ?? t(req?.drivers_license_path),
+      dlBack: t(req?.drivers_license_back_path),
+    })
   }, [applicantId])
 
   useEffect(() => {
@@ -96,6 +139,10 @@ export default function DocumentsPage() {
     document.addEventListener("visibilitychange", onVis)
     return () => document.removeEventListener("visibilitychange", onVis)
   }, [refreshIdentityDocsStatus])
+
+  const publicUrl = useCallback((path: string) => {
+    return supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).getPublicUrl(path).data.publicUrl
+  }, [])
 
   const startSigning = useCallback(async () => {
     if (!agreed) {
@@ -202,18 +249,98 @@ export default function DocumentsPage() {
     }
 
     if (!identityDocsComplete) {
-      setError("Please upload your SSN and driver's license on the identity step (open “SSN & Driver's License” above).")
+      setError("Upload SSN and driver’s license (front and back) on the identity step.")
       return
     }
 
-    await syncZoho()
+    if (!applicantId) {
+      setError("Missing applicant session. Return to Step 1.")
+      return
+    }
 
-    router.push("/application/step-4-identity")
+    setSaving(true)
+    setError(null)
+
+    try {
+      const ssn_url = identityPaths.ssnFront ? publicUrl(identityPaths.ssnFront) : null
+      const ssn_back_url = identityPaths.ssnBack ? publicUrl(identityPaths.ssnBack) : null
+      const drivers_license_url = identityPaths.dlFront ? publicUrl(identityPaths.dlFront) : null
+      const drivers_license_back_url = identityPaths.dlBack ? publicUrl(identityPaths.dlBack) : null
+
+      const docRes = await fetch("/api/onboarding/worker-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicantId,
+          ssn_url,
+          ssn_back_url,
+          drivers_license_url,
+          drivers_license_back_url,
+        }),
+      })
+      const docJson = (await docRes.json()) as { error?: string }
+      if (!docRes.ok) {
+        throw new Error(docJson.error || "Could not save worker documents")
+      }
+
+      await syncZoho()
+
+      router.push("/application/step-5-add-references")
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Save failed"
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSkipForNow = () => {
     localStorage.setItem("step4Skipped", "1")
-    router.push("/application/step-4-identity")
+    router.push("/application/step-5-add-references")
+  }
+
+  function IdentityFileCard({
+    path,
+    subtitle,
+  }: {
+    path: string | null
+    subtitle: string
+  }) {
+    if (!path) {
+      return (
+        <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/80 p-6 text-center text-sm text-gray-500">
+          Not uploaded
+        </div>
+      )
+    }
+    const url = publicUrl(path)
+    const pdf = isPdfPath(path)
+
+    return (
+      <div className="rounded-xl border border-teal-200 bg-white p-3 shadow-sm flex gap-3 items-center">
+        <div className="w-16 h-16 shrink-0 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
+          {pdf ? (
+            <FileText className="w-8 h-8 text-teal-600" />
+          ) : (
+            <Image src={url} alt="" width={64} height={64} className="object-cover w-full h-full" unoptimized />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-gray-500">{subtitle}</p>
+          <p className="text-sm font-medium text-gray-900 truncate" title={fileLabel(path)}>
+            {fileLabel(path)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => router.push("/application/step-4-identity")}
+          className="p-2 text-gray-400 hover:text-red-600 rounded-lg"
+          aria-label="Replace file"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -248,7 +375,7 @@ export default function DocumentsPage() {
               <span className="text-gray-800 font-medium">I Agree to the Authorization</span>
             </label>
 
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Review and Sign</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Signed Documents</h2>
             <div className="mb-10 p-5 bg-gray-50 rounded-xl border border-gray-200">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-4 min-w-0">
@@ -258,7 +385,7 @@ export default function DocumentsPage() {
                     </svg>
                   </div>
                   <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">Auth Release form.pdf</p>
+                    <p className="font-medium text-gray-900 truncate">Authorization_agreement.pdf</p>
                     <p className="text-sm text-gray-500">Mandatory</p>
                   </div>
                 </div>
@@ -277,7 +404,7 @@ export default function DocumentsPage() {
                 )}
 
                 {isSigned && (
-                  <span className="px-5 py-2 bg-green-600 text-white rounded-lg shrink-0">Signed ✓</span>
+                  <span className="px-5 py-2 bg-teal-600 text-white rounded-lg shrink-0 font-medium">Signed</span>
                 )}
               </div>
 
@@ -321,24 +448,36 @@ export default function DocumentsPage() {
             </div>
 
             <div className="mb-10">
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">Add Documents</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Add Documents</h2>
+                <button
+                  type="button"
+                  onClick={() => router.push("/application/step-4-identity")}
+                  className="text-sm font-medium text-teal-700 hover:text-teal-900 w-fit"
+                >
+                  Edit uploads
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => router.push("/application/step-4-identity")}
-                className="w-full flex items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-white hover:bg-teal-50/80 text-left transition"
-              >
+              <div className="space-y-8">
                 <div>
-                  <p className="font-medium text-gray-900">SSN &amp; Driver&apos;s License</p>
-                  <p className="text-sm text-amber-700 font-medium mt-1">Required</p>
-                  {identityDocsComplete ? (
-                    <p className="text-sm text-green-700 font-medium mt-1">Uploaded ✓</p>
-                  ) : (
-                    <p className="text-sm text-gray-500 mt-1">Tap to open upload page</p>
-                  )}
+                  <p className="text-sm font-semibold text-gray-900 mb-3">SSN card</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <IdentityFileCard path={identityPaths.ssnFront} subtitle="Front" />
+                    <IdentityFileCard path={identityPaths.ssnBack} subtitle="Back" />
+                  </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-teal-600 shrink-0" aria-hidden />
-              </button>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 mb-3">Driver&apos;s license</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <IdentityFileCard path={identityPaths.dlFront} subtitle="Front" />
+                    <IdentityFileCard path={identityPaths.dlBack} subtitle="Back" />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">Only PNG, JPG, or PDF • Max 10 MB per file</p>
             </div>
 
             {error && <p className="mb-4 text-red-600 text-sm">{error}</p>}
@@ -354,21 +493,27 @@ export default function DocumentsPage() {
               </button>
               <button
                 type="button"
-                onClick={handleSaveAndContinue}
-                disabled={!agreed || !isSigned || !identityDocsComplete}
+                onClick={() => void handleSaveAndContinue()}
+                disabled={saving || !agreed || !isSigned || !identityDocsComplete}
                 className={`px-8 py-3 rounded-xl text-white font-medium min-w-[160px] transition ${
-                  !agreed || !isSigned || !identityDocsComplete
+                  saving || !agreed || !isSigned || !identityDocsComplete
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-teal-600 hover:bg-teal-700"
                 }`}
               >
-                Save &amp; Continue
+                {saving ? "Saving…" : "Save &amp; Continue"}
               </button>
             </div>
           </div>
 
           <div className="w-full lg:w-96 bg-gray-50 p-8 lg:p-12 flex flex-col items-center justify-center border-t lg:border-l">
-            <img src="/images/nexus-logo.png" alt="Nexus MedPro Logo" className="w-48 mb-8" />
+            <Image
+              src="/images/nexus-logo.png"
+              alt="Nexus MedPro Logo"
+              width={192}
+              height={72}
+              className="w-48 h-auto mb-8"
+            />
             <p className="text-center text-gray-700 text-sm leading-relaxed">
               Nexus MedPro Staffing – Connecting Healthcare professionals with service providers
             </p>

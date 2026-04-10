@@ -10,21 +10,34 @@ import OnboardingLayout from "../../components/OnboardingLayout"
 import StepProgress from "../../components/StepProgress"
 import FileUploadBox from "../../components/FileUploadBox"
 
+const MAX_BYTES = 10 * 1024 * 1024
+
 export default function Step4Identity() {
   const router = useRouter()
 
-  const [ssnFile, setSsnFile] = useState<File | null>(null)
-  const [licenseFile, setLicenseFile] = useState<File | null>(null)
+  const [ssnFront, setSsnFront] = useState<File | null>(null)
+  const [ssnBack, setSsnBack] = useState<File | null>(null)
+  const [dlFront, setDlFront] = useState<File | null>(null)
+  const [dlBack, setDlBack] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper: upload file to Supabase Storage and return public URL
-  const uploadFile = async (file: File, applicant: string, folder: string): Promise<string> => {
+  const uploadFile = async (
+    file: File,
+    applicantId: string,
+    segment: "ssn_front" | "ssn_back" | "dl_front" | "dl_back"
+  ): Promise<string> => {
+    if (file.size > MAX_BYTES) {
+      throw new Error("Each file must be 10 MB or smaller.")
+    }
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
-    const prefix = folder === "ssn" ? "ssn" : "drivers_license"
-    const path = `${prefix}/${applicant}/${folder}-${Date.now()}-${sanitizedName}`
+    const folder =
+      segment === "ssn_front" || segment === "ssn_back"
+        ? "ssn"
+        : "drivers_license"
+    const storagePath = `${folder}/${applicantId}/${segment}-${Date.now()}-${sanitizedName}`
 
-    const { error: uploadError } = await supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).upload(path, file, {
+    const { error: uploadError } = await supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).upload(storagePath, file, {
       cacheControl: "3600",
       upsert: true,
       contentType: file.type || "application/octet-stream",
@@ -32,67 +45,70 @@ export default function Step4Identity() {
 
     if (uploadError) throw new Error(uploadError.message || "File upload failed")
 
-    const { data: urlData } = supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).getPublicUrl(path)
-
-    if (!urlData.publicUrl) throw new Error("Could not generate public URL")
-
-    return urlData.publicUrl
+    return storagePath
   }
 
   const handleNext = async () => {
     setError(null)
 
-    // Button is disabled, but double-check
-    if (!ssnFile || !licenseFile) {
-      setError("Please upload both SSN Card and Driver's License")
+    if (!ssnFront || !ssnBack || !dlFront || !dlBack) {
+      setError("Please upload all four files: SSN front & back, and driver's license front & back.")
       return
     }
 
     setLoading(true)
 
     try {
-      let applicantId = localStorage.getItem("applicantId")
-      if (!applicantId) {
-        applicantId = crypto.randomUUID()
-        localStorage.setItem("applicantId", applicantId)
+      const { data: userData, error: authErr } = await supabase.auth.getUser()
+      const user = userData?.user
+      if (authErr || !user) {
+        throw new Error("Please sign in to save your documents.")
       }
 
-      const ssnUrl = await uploadFile(ssnFile, applicantId, "ssn")
-      const licenseUrl = await uploadFile(licenseFile, applicantId, "license")
+      const applicantId = user.id
+      localStorage.setItem("applicantId", applicantId)
 
-      const docRes = await fetch("/api/onboarding/worker-documents", {
+      const [pSsnF, pSsnB, pDlF, pDlB] = await Promise.all([
+        uploadFile(ssnFront, applicantId, "ssn_front"),
+        uploadFile(ssnBack, applicantId, "ssn_back"),
+        uploadFile(dlFront, applicantId, "dl_front"),
+        uploadFile(dlBack, applicantId, "dl_back"),
+      ])
+
+      const res = await fetch("/api/onboarding/worker-requirements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicantId,
-          ssn_url: ssnUrl,
-          drivers_license_url: licenseUrl,
+          ssn_card_front_path: pSsnF,
+          ssn_card_back_path: pSsnB,
+          drivers_license_front_path: pDlF,
+          drivers_license_back_path: pDlB,
+          ssn_card_path: null,
+          drivers_license_path: null,
         }),
       })
-      const docJson = (await docRes.json()) as { error?: string }
-      if (!docRes.ok) throw new Error(docJson.error || "Could not save document URLs")
+      const json = (await res.json()) as { error?: string }
+      if (!res.ok) throw new Error(json.error || "Could not save to worker requirements")
 
-      // Store previews for next page (step-4-documents)
+      const url = (path: string) => supabase.storage.from(WORKER_REQUIRED_FILES_BUCKET).getPublicUrl(path).data.publicUrl
+
       localStorage.setItem(
         "identityDocuments",
         JSON.stringify({
-          ssn: {
-            name: ssnFile.name,
-            url: ssnUrl,
-          },
-          license: {
-            name: licenseFile.name,
-            url: licenseUrl,
-          },
+          ssnFront: { name: ssnFront.name, path: pSsnF, url: url(pSsnF) },
+          ssnBack: { name: ssnBack.name, path: pSsnB, url: url(pSsnB) },
+          dlFront: { name: dlFront.name, path: pDlF, url: url(pDlF) },
+          dlBack: { name: dlBack.name, path: pDlB, url: url(pDlB) },
           uploadedAt: new Date().toISOString(),
         })
       )
 
-      // Clear local form state
-      setSsnFile(null)
-      setLicenseFile(null)
+      setSsnFront(null)
+      setSsnBack(null)
+      setDlFront(null)
+      setDlBack(null)
 
-      // Go to next step
       router.push("/application/step-4-documents")
     } catch (err: unknown) {
       console.error("Upload/save error:", err)
@@ -103,52 +119,86 @@ export default function Step4Identity() {
     }
   }
 
+  const handleSkip = () => {
+    router.push("/application/step-4-documents")
+  }
+
+  const canSubmit =
+    Boolean(ssnFront && ssnBack && dlFront && dlBack) && !loading
+
   return (
     <OnboardingLayout>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 w-full">
+        <div className="flex justify-end mb-2">
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="text-sm font-medium text-teal-700 hover:text-teal-900"
+          >
+            Skip for Now &gt;
+          </button>
+        </div>
+
         <StepProgress />
 
-        <h2 className="text-xl sm:text-2xl font-semibold text-black mb-6">
-          SSN & Drivers License
-        </h2>
+        <h2 className="text-xl sm:text-2xl font-semibold text-black mb-6">SSN &amp; Driver&apos;s License</h2>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {error}
-          </div>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
         )}
 
         <div className="space-y-8">
-          {/* SSN Card */}
           <div>
-            <label className="block text-sm font-medium text-black mb-2">
-              SSN Card <span className="text-red-600">*</span>
-            </label>
-            <FileUploadBox
-              file={ssnFile}
-              setFile={setSsnFile}
-              accept="image/png,image/jpeg,image/jpg,application/pdf"
-            />
+            <p className="text-sm font-semibold text-gray-900 mb-3">SSN card</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Front *</label>
+                <FileUploadBox
+                  inputId="identity-ssn-front"
+                  file={ssnFront}
+                  setFile={setSsnFront}
+                  accept="image/png,image/jpeg,image/jpg,application/pdf"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Back *</label>
+                <FileUploadBox
+                  inputId="identity-ssn-back"
+                  file={ssnBack}
+                  setFile={setSsnBack}
+                  accept="image/png,image/jpeg,image/jpg,application/pdf"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Driver's License */}
           <div>
-            <label className="block text-sm font-medium text-black mb-2">
-              Drivers License <span className="text-red-600">*</span>
-            </label>
-            <FileUploadBox
-              file={licenseFile}
-              setFile={setLicenseFile}
-              accept="image/png,image/jpeg,image/jpg,application/pdf"
-            />
+            <p className="text-sm font-semibold text-gray-900 mb-3">Driver&apos;s license</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Front *</label>
+                <FileUploadBox
+                  inputId="identity-dl-front"
+                  file={dlFront}
+                  setFile={setDlFront}
+                  accept="image/png,image/jpeg,image/jpg,application/pdf"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Back *</label>
+                <FileUploadBox
+                  inputId="identity-dl-back"
+                  file={dlBack}
+                  setFile={setDlBack}
+                  accept="image/png,image/jpeg,image/jpg,application/pdf"
+                />
+              </div>
+            </div>
           </div>
 
-          <p className="text-xs text-gray-500">
-            Supported formats: PNG, JPG, JPEG, PDF • Max size: 10 MB per file
-          </p>
+          <p className="text-xs text-gray-500">Only PNG, JPG, or PDF • Max 10 MB per file</p>
         </div>
 
-        {/* Buttons */}
         <div className="flex flex-col sm:flex-row justify-end gap-4 mt-10">
           <button
             type="button"
@@ -159,18 +209,16 @@ export default function Step4Identity() {
             Back
           </button>
 
-        <button
-  type="button"
-  onClick={handleNext}
-  disabled={loading}   // ← only loading disables it
-  className={`px-6 py-2.5 min-w-[160px] rounded-lg text-white font-medium transition
-    ${loading
-      ? "bg-gray-400 cursor-not-allowed"
-      : "bg-teal-600 hover:bg-teal-700 shadow-sm"
-    }`}
->
-  {loading ? "Uploading..." : "Save & Continue"}
-</button>
+          <button
+            type="button"
+            onClick={() => void handleNext()}
+            disabled={!canSubmit}
+            className={`px-6 py-2.5 min-w-[160px] rounded-lg text-white font-medium transition ${
+              !canSubmit ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700 shadow-sm"
+            }`}
+          >
+            {loading ? "Saving…" : "Save & Continue"}
+          </button>
         </div>
       </div>
     </OnboardingLayout>

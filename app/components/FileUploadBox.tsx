@@ -5,9 +5,11 @@ interface FileUploadBoxProps {
   file: File | null
   setFile: Dispatch<SetStateAction<File | null>>
   accept?: string
+  /** Unique id for input/label pair when multiple boxes exist on one page */
+  inputId?: string
 }
 
-export default function FileUploadBox({ file, setFile, accept }: FileUploadBoxProps) {
+export default function FileUploadBox({ file, setFile, accept, inputId = "file-upload" }: FileUploadBoxProps) {
   return (
     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-teal-400 transition-colors">
       <input
@@ -19,9 +21,9 @@ export default function FileUploadBox({ file, setFile, accept }: FileUploadBoxPr
           }
         }}
         className="hidden"
-        id="file-upload"
+        id={inputId}
       />
-      <label htmlFor="file-upload" className="cursor-pointer block">
+      <label htmlFor={inputId} className="cursor-pointer block">
         {file ? (
           <div className="space-y-2">
             <p className="text-teal-600 font-medium">{file.name}</p>

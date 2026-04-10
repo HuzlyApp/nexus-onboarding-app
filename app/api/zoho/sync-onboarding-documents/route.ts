@@ -23,7 +23,9 @@ const DOC_LABELS: Record<string, string> = {
   tb_test_url: "TB_Test",
   cpr_certification_url: "CPR",
   ssn_url: "SSN",
+  ssn_back_url: "SSN_Back",
   drivers_license_url: "Drivers_License",
+  drivers_license_back_url: "Drivers_License_Back",
   document_url: "Document",
 }
 
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
     const { data: docRow, error: dErr } = await supabase
       .from("worker_documents")
       .select(
-        "nursing_license_url, tb_test_url, cpr_certification_url, ssn_url, drivers_license_url, document_url"
+        "nursing_license_url, tb_test_url, cpr_certification_url, ssn_url, ssn_back_url, drivers_license_url, drivers_license_back_url, document_url"
       )
       .eq("worker_id", worker.id)
       .maybeSingle()
