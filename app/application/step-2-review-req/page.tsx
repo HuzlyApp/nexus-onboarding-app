@@ -1,10 +1,13 @@
 "use client"
 
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { FileText, Trash2 } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import toast, { Toaster } from "react-hot-toast"
+import OnboardingLayout from "@/app/components/OnboardingLayout"
+import OnboardingStepper from "@/app/components/OnboardingStepper"
 
 interface FileInfo {
   name: string
@@ -25,261 +28,211 @@ interface FileRowProps {
 }
 
 const FileRow = ({ file, type, removeFile }: FileRowProps) => {
-
   if (!file) return null
 
   return (
-    <div className="border border-teal-400 bg-teal-50 rounded-lg px-4 py-3 flex items-center justify-between">
+    <div className="flex h-[72px] w-full items-center justify-between gap-3 rounded-lg border border-[#1db4a3] bg-[#ecfffd] px-4 md:w-[650px]">
+      <div className="flex min-w-0 items-center gap-3">
+        <Image
+          src="/icons/jpeg-icon.svg"
+          alt="JPEG icon"
+          width={24}
+          height={24}
+          className="h-6 w-6 flex-none"
+        />
 
-      <div className="flex items-center gap-3">
-
-        <FileText className="text-teal-600"/>
-
-        <div>
-          <p className="text-sm font-medium text-black">{file.name}</p>
-          <p className="text-xs text-black">{file.size}</p>
+        <div className="min-w-0">
+          <p className="truncate text-[14px] font-semibold leading-5 text-[#0b7f74]">
+            {file.name}
+          </p>
+          <p className="text-[11px] font-normal leading-4 text-slate-500">
+            {file.size}
+          </p>
         </div>
-
       </div>
 
       <button
+        type="button"
         onClick={() => removeFile(type)}
-        className="text-gray-700"
+        className="cursor-pointer rounded-md p-2 transition hover:bg-white/70"
+        aria-label={`Delete ${file.name}`}
       >
-        <Trash2 size={18}/>
+        <Image
+          src="/icons/delete-icon.svg"
+          alt="Delete"
+          width={24}
+          height={24}
+          className="h-6 w-6"
+        />
       </button>
-
     </div>
   )
 }
 
-export default function Step2ReviewReq(){
-
+export default function Step2ReviewReq() {
   const router = useRouter()
 
-  const [files,setFiles] = useState<FilesState>(() => {
-
+  const [files, setFiles] = useState<FilesState>(() => {
     if (typeof window === "undefined") {
-      return { license:null, tb:null, cpr:null }
+      return { license: null, tb: null, cpr: null }
     }
 
     const stored = localStorage.getItem("step2_files")
 
-    if(!stored){
-      return { license:null, tb:null, cpr:null }
+    if (!stored) {
+      return { license: null, tb: null, cpr: null }
     }
 
     return JSON.parse(stored)
-
   })
 
-  function removeFile(type:keyof FilesState){
-
-    setFiles(prev=>{
-
+  function removeFile(type: keyof FilesState) {
+    setFiles((prev) => {
       const updated = {
         ...prev,
-        [type]:null
+        [type]: null
       }
 
-      localStorage.setItem("step2_files",JSON.stringify(updated))
+      localStorage.setItem("step2_files", JSON.stringify(updated))
 
       return updated
     })
-
   }
 
-  async function saveRequirements(){
-
+  async function saveRequirements() {
     const toastId = toast.loading("Saving requirements...")
 
-    try{
+    try {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser()
 
-      const { data:{ user } } = await supabase.auth.getUser()
-
-      if(!user){
-        toast.error("User not logged in",{id:toastId})
+      if (!user) {
+        toast.error("User not logged in", { id: toastId })
         return
       }
 
       const workerId = user.id
 
-      for(const [type,file] of Object.entries(files)){
-
-        if(!file || !file.file) continue
+      for (const [type, file] of Object.entries(files)) {
+        if (!file || !file.file) continue
 
         const path = `${workerId}/${type}-${Date.now()}-${file.name}`
 
-        /* Upload to storage */
-
-        const { error:uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("worker_required_files")
-          .upload(path,file.file)
+          .upload(path, file.file)
 
-        if(uploadError){
-          toast.error(uploadError.message,{id:toastId})
+        if (uploadError) {
+          toast.error(uploadError.message, { id: toastId })
           return
         }
 
-        /* Save metadata */
-
-        const { error:insertError } = await supabase
+        const { error: insertError } = await supabase
           .from("worker_required_files")
           .insert({
-            worker_id:workerId,
-            file_type:type,
-            file_url:path
+            worker_id: workerId,
+            file_type: type,
+            file_url: path
           })
 
-        if(insertError){
-          toast.error(insertError.message,{id:toastId})
+        if (insertError) {
+          toast.error(insertError.message, { id: toastId })
           return
         }
-
       }
 
-      toast.success("Requirements saved",{id:toastId})
+      toast.success("Requirements saved", { id: toastId })
 
-      setTimeout(()=>{
+      setTimeout(() => {
         router.push("/application/step-3-skills")
-      },1200)
-
-    }catch(err){
-
-      toast.error("Unexpected error",{id:toastId})
-
+      }, 1200)
+    } catch {
+      toast.error("Unexpected error", { id: toastId })
     }
-
   }
 
-  return(
+  return (
+    <>
+      <Toaster position="top-center" />
 
-    <div className="min-h-screen bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+      <OnboardingLayout
+        cardClassName="md:h-[712px] md:min-h-[712px]"
+        rightPanelContentClassName="p-5"
+        rightPanelImageSrc="/images/step-2-license-bg-image.jpg"
+        rightPanelImageClassName="opacity-50 object-top"
+        rightPanelOverlayClassName="bg-white/0"
+      >
+        <div className="flex h-full flex-col px-10 pb-10 pt-6">
+          <OnboardingStepper currentStep={2} completedThrough={2} />
 
-      <Toaster position="top-center"/>
+          <div className="flex flex-1 flex-col pt-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[24px] font-semibold leading-8 text-slate-800">
+                Add Requirements
+              </h2>
 
-      <div className="bg-white w-[1000px] rounded-xl shadow-xl flex overflow-hidden">
-
-        {/* LEFT PANEL */}
-
-        <div className="w-2/3 p-10">
-
-          {/* STEP PROGRESS */}
-
-          <div className="flex items-center text-sm mb-6">
-
-            <span className="text-teal-600 font-medium">Add Resume</span>
-            <div className="mx-3 w-6 h-[2px] bg-teal-500"/>
-
-            <span className="text-teal-600 font-semibold">Professional License</span>
-            <div className="mx-3 w-6 h-[2px] bg-gray-300"/>
-
-            <span className="text-black">Skill Assessment</span>
-            <div className="mx-3 w-6 h-[2px] bg-gray-300"/>
-
-            <span className="text-black">Authorizations & Documents</span>
-            <div className="mx-3 w-6 h-[2px] bg-gray-300"/>
-
-            <span className="text-black">Add References</span>
-            <div className="mx-3 w-6 h-[2px] bg-gray-300"/>
-
-            <span className="text-black">Summary</span>
-
-          </div>
-
-          {/* HEADER */}
-
-          <div className="flex justify-between mb-6">
-
-            <h2 className="text-lg font-semibold text-black">
-              Add Requirements
-            </h2>
-
-            <button
-              onClick={()=>router.push("/application/step-3-skills")}
-              className="text-teal-600 text-sm"
-            >
-              Skip for Now →
-            </button>
-
-          </div>
-
-          {/* FILES */}
-
-          <div className="space-y-4">
-
-            <div>
-              <p className="text-sm text-black mb-2">Nursing License</p>
-              <FileRow file={files.license} type="license" removeFile={removeFile}/>
+              <button
+                type="button"
+                onClick={() => router.push("/application/step-3-skills")}
+                className="inline-flex cursor-pointer items-center gap-2 text-[12px] font-medium leading-5 text-[#1db4a3]"
+              >
+                Skip for Now
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
 
-            <div>
-              <p className="text-sm text-black mb-2">TB Test</p>
-              <FileRow file={files.tb} type="tb" removeFile={removeFile}/>
+            <div className="mt-6 space-y-6">
+              <div className="space-y-3">
+                <p className="text-[16px] font-semibold leading-6 text-slate-800">
+                  Nursing License
+                </p>
+                <FileRow
+                  file={files.license}
+                  type="license"
+                  removeFile={removeFile}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[16px] font-semibold leading-6 text-slate-800">
+                  TB Test
+                </p>
+                <FileRow file={files.tb} type="tb" removeFile={removeFile} />
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[16px] font-semibold leading-6 text-slate-800">
+                  CPR Certifications
+                </p>
+                <FileRow file={files.cpr} type="cpr" removeFile={removeFile} />
+              </div>
             </div>
 
-            <div>
-              <p className="text-sm text-black mb-2">CPR Certifications</p>
-              <FileRow file={files.cpr} type="cpr" removeFile={removeFile}/>
-            </div>
-
-          </div>
-
-          <p className="text-xs text-black mt-4 mb-6">
-            Only support png, jpg or pdf files
-          </p>
-
-          {/* BUTTONS */}
-
-          <div className="flex justify-end gap-3">
-
-            <button
-              onClick={()=>router.back()}
-              className="border px-4 py-2 rounded text-black"
-            >
-              Back
-            </button>
-
-            <button
-              onClick={saveRequirements}
-              className="bg-teal-600 text-white px-6 py-2 rounded"
-            >
-              Save & Continue
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* RIGHT PANEL */}
-
-        <div className="w-1/3 bg-gray-100 relative flex items-center justify-center">
-
-          <img
-            src="/images/nurse.jpg"
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
-          />
-
-          <div className="z-10 text-center px-6">
-
-            <h2 className="text-2xl font-bold text-teal-700">
-              NEXUS
-            </h2>
-
-            <div className="w-10 h-[2px] bg-teal-500 mx-auto my-3"/>
-
-            <p className="text-sm text-black">
-              Nexus MedPro Staffing – Connecting Healthcare professionals with service providers
+            <p className="mt-4 text-[10px] font-normal leading-4 text-slate-500">
+              Only support png, jpg or pdf files
             </p>
 
+            <div className="mt-auto flex items-center justify-end gap-4 pt-8">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="cursor-pointer inline-flex h-11 w-[66px] items-center justify-center rounded-lg border border-[#1db4a3] text-[12px] font-medium leading-5 text-[#1db4a3] transition hover:bg-[#ecfffd]"
+              >
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={saveRequirements}
+                className="cursor-pointer inline-flex h-11 w-[141px] items-center justify-center rounded-lg bg-[#1db4a3] text-[12px] font-medium leading-5 text-white transition hover:bg-[#189d8e]"
+              >
+                Save &amp; continue
+              </button>
+            </div>
           </div>
-
         </div>
-
-      </div>
-
-    </div>
-
+      </OnboardingLayout>
+    </>
   )
-
 }

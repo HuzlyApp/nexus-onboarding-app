@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { useDropzone } from "react-dropzone"
-import { Trash2, FileText } from "lucide-react"
+import { ChevronRight, FileText, Trash2 } from "lucide-react"
+import OnboardingLayout from "@/app/components/OnboardingLayout"
 import OnboardingStepper from "@/app/components/OnboardingStepper"
-
 
 type UploadFile = {
   name: string
@@ -15,281 +16,192 @@ type UploadFile = {
 type UploadType = "license" | "tb" | "cpr"
 
 export default function Step2License() {
-
-const router = useRouter()
-
-const [files, setFiles] = useState<{
-license: UploadFile | null
-tb: UploadFile | null
-cpr: UploadFile | null
-}>({
-license:null,
-tb:null,
-cpr:null
-})
-
-const handleUpload = (file:File,type:UploadType)=>{
-
-setFiles((prev)=>({
-...prev,
-[type]:{
-name:file.name,
-size:(file.size/1024/1024).toFixed(1)+" MB"
-}
-}))
-
-}
-
-const UploadBox = ({
-type,
-label
-}:{type:UploadType,label:string})=>{
-
-const onDrop = (acceptedFiles:File[])=>{
-if(!acceptedFiles[0]) return
-handleUpload(acceptedFiles[0],type)
-}
-
-const {getRootProps,getInputProps} = useDropzone({
-onDrop,
-accept:{
-"image/*":[],
-"application/pdf":[]
-}
-})
-
-const file = files[type]
-
-return(
-
-<div className="mb-6">
-
-<p className="text-sm text-black mb-2">
-{label}
-</p>
-
-{file ? (
-
-<div className="border border-teal-300 bg-teal-50 rounded-lg px-4 py-3 flex items-center justify-between">
-
-<div className="flex items-center gap-3">
-
-<FileText className="text-teal-600"/>
-
-<div>
-
-<p className="text-sm font-medium text-black">
-{file.name}
-</p>
-
-<p className="text-xs text-black">
-{file.size}
-</p>
-
-</div>
-
-</div>
-
-<button
-onClick={()=>setFiles(prev=>({...prev,[type]:null}))}
->
-<Trash2 size={18}/>
-</button>
-
-</div>
-
-):( 
-
-<div
-{...getRootProps()}
-className="border-2 border-dashed border-teal-300 rounded-lg p-8 text-center cursor-pointer"
->
-
-<input {...getInputProps()} />
-
-<div className="flex flex-col items-center gap-2">
-
-<FileText className="text-teal-600"/>
-
-<p className="text-sm text-black">
-Drag your file(s) to start uploading
-</p>
-
-<button className="border px-4 py-1 rounded text-sm text-black">
-Browse files
-</button>
-
-<p className="text-xs text-black">
-Max 10 MB files are allowed
-</p>
-
-</div>
-
-</div>
-
-)}
-
-</div>
-
-)
-
-}
-
-const goNext = () => {
-
-/* pass data to next page */
-
-localStorage.setItem(
-"step2_files",
-JSON.stringify(files)
-)
-
-router.push("/application/step-2-review-req")
-
-}
-
-return(
-
-<div className="min-h-screen bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-
-{/* MAIN CARD */}
-
-<div className="bg-white w-[1000px] rounded-xl shadow-xl flex overflow-hidden">
-
-{/* LEFT CONTENT */}
-
-<div className="w-2/3 p-10">
-<OnboardingStepper currentStep={2} />
-
-{/* STEP PROGRESS */}
-
-<div className="flex items-center text-sm mb-6">
-
-<span className="text-teal-600 font-medium">
-Add Resume
-</span>
-
-<div className="mx-3 h-[2px] w-6 bg-teal-500"/>
-
-<span className="text-teal-600 font-semibold">
-Professional License
-</span>
-
-<div className="mx-3 h-[2px] w-6 bg-gray-300"/>
-
-<span className="text-black">
-Skill Assessment
-</span>
-
-<div className="mx-3 h-[2px] w-6 bg-gray-300"/>
-
-<span className="text-black">
-Authorizations & Documents
-</span>
-
-<div className="mx-3 h-[2px] w-6 bg-gray-300"/>
-
-<span className="text-black">
-Add References
-</span>
-
-<div className="mx-3 h-[2px] w-6 bg-gray-300"/>
-
-<span className="text-black">
-Summary
-</span>
-
-</div>
-
-{/* HEADER */}
-
-<div className="flex justify-between mb-6">
-
-<h2 className="text-lg font-semibold text-black">
-Add Requirements
-</h2>
-
-<button
-onClick={()=>router.push("/application/step-3-skills")}
-className="text-teal-600 text-sm"
->
-Skip for Now →
-</button>
-
-</div>
-
-{/* FILE UPLOADS */}
-
-<UploadBox
-type="license"
-label="Nursing License"
-/>
-
-<UploadBox
-type="tb"
-label="TB Test"
-/>
-
-<UploadBox
-type="cpr"
-label="CPR Certifications"
-/>
-
-<p className="text-xs text-black mb-6">
-Only support png, jpg or pdf files
-</p>
-
-{/* BUTTONS */}
-
-<div className="flex justify-end gap-3">
-
-<button
-onClick={()=>router.back()}
-className="border px-4 py-2 rounded text-black"
->
-Back
-</button>
-
-<button
-onClick={goNext}
-className="bg-teal-600 text-white px-6 py-2 rounded"
->
-Next
-</button>
-
-</div>
-
-</div>
-
-{/* RIGHT PANEL */}
-
-<div className="w-1/3 bg-gray-100 relative flex items-center justify-center">
-
-<img
-src="/images/nurse.jpg"
-className="absolute inset-0 w-full h-full object-cover opacity-30"
-/>
-
-<div className="z-10 text-center px-6">
-
-<h2 className="text-2xl font-bold text-teal-700">
-NEXUS
-</h2>
-
-<div className="w-10 h-[2px] bg-teal-500 mx-auto my-3"/>
-
-<p className="text-sm text-black">
-Nexus MedPro Staffing – Connecting Healthcare professionals with service providers
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-)
-
+  const router = useRouter()
+
+  const [files, setFiles] = useState<Record<UploadType, UploadFile | null>>({
+    license: null,
+    tb: null,
+    cpr: null
+  })
+
+  const handleUpload = (file: File, type: UploadType) => {
+    setFiles((prev) => ({
+      ...prev,
+      [type]: {
+        name: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
+      }
+    }))
+  }
+
+  const UploadBox = ({
+    type,
+    label,
+    hint
+  }: {
+    type: UploadType
+    label: string
+    hint?: string
+  }) => {
+    const onDrop = (acceptedFiles: File[]) => {
+      if (!acceptedFiles[0]) return
+      handleUpload(acceptedFiles[0], type)
+    }
+
+    const { getRootProps, getInputProps } = useDropzone({
+      onDrop,
+      accept: {
+        "image/*": [],
+        "application/pdf": []
+      }
+    })
+
+    const file = files[type]
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[16px] font-semibold leading-6 text-slate-800">
+            {label}
+          </p>
+          {hint ? (
+            <p className="text-[10px] font-normal leading-4 text-slate-500">
+              {hint}
+            </p>
+          ) : null}
+        </div>
+
+        {file ? (
+          <div className="flex items-center justify-between rounded-lg border border-[#98e1d8] bg-[#ecfffd] px-4 py-3">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-[#1db4a3]" />
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-medium leading-5 text-slate-800">
+                  {file.name}
+                </p>
+                <p className="text-[11px] font-normal leading-4 text-slate-600">
+                  {file.size}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setFiles((prev) => ({
+                  ...prev,
+                  [type]: null
+                }))
+              }
+              className="cursor-pointer rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              aria-label={`Remove ${label}`}
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+        ) : (
+          <div
+            {...getRootProps()}
+            className="w-full cursor-pointer rounded-[12px] border border-dashed border-[#78d7cc] px-6 py-6 text-center transition hover:bg-slate-50 md:h-[206px] md:w-[650px]"
+          >
+            <input {...getInputProps()} />
+
+            <div className="mx-auto flex h-full max-w-[360px] flex-col items-center justify-center gap-3">
+              <Image
+                src="/images/upload.svg"
+                alt=""
+                width={36}
+                height={36}
+                className="h-9 w-9"
+                priority
+              />
+
+              <p className="text-[12px] font-normal leading-5 text-slate-800">
+                Drag your file(s) to start uploading
+              </p>
+
+              <p className="text-[10px] font-normal leading-4 text-slate-400">
+                OR
+              </p>
+
+              <button
+                type="button"
+                className="cursor-pointer rounded-md border border-[#1db4a3] px-4 py-1 text-[12px] font-medium leading-5 text-[#1db4a3] transition hover:bg-[#ecfffd]"
+              >
+                Browse files
+              </button>
+
+              <p className="text-[10px] font-normal leading-4 text-slate-500">
+                Max 10 MB files are allowed
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const goNext = () => {
+    localStorage.setItem("step2_files", JSON.stringify(files))
+    router.push("/application/step-2-review-req")
+  }
+
+  return (
+    <OnboardingLayout
+      cardClassName="md:h-[1114px] md:min-h-[1114px]"
+      rightPanelContentClassName="p-5"
+      rightPanelImageSrc="/images/step-2-license-bg-image.jpg"
+      rightPanelImageClassName="opacity-50 object-top"
+      rightPanelOverlayClassName="bg-white/0"
+    >
+      <div className="flex h-full flex-col px-10 pb-10 pt-8">
+        <OnboardingStepper currentStep={2} />
+
+        <div className="flex flex-1 flex-col pt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[24px] font-semibold leading-8 text-slate-800">
+              Add Requirements
+            </h2>
+
+            <button
+              type="button"
+              onClick={() => router.push("/application/step-3-skills")}
+              className="cursor-pointer text-[12px] font-medium leading-5 text-[#1db4a3]"
+            >
+              Skip for Now {"\u2192"}
+            </button>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-6">
+            <UploadBox type="license" label="Nursing License" hint="front/back" />
+            <UploadBox type="tb" label="TB Test" hint="last 12 months" />
+            <UploadBox type="cpr" label="CPR Certifications" />
+          </div>
+
+          <p className="mt-3 text-[10px] font-normal leading-4 text-slate-500">
+            Only support png, jpg or pdf files
+          </p>
+
+          <div className="mt-auto flex items-center justify-end gap-3 pt-8">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="cursor-pointer rounded-md border border-[#1db4a3] px-5 py-2 text-[12px] font-medium leading-5 text-[#1db4a3] transition hover:bg-[#ecfffd]"
+            >
+              Back
+            </button>
+
+            <button
+              type="button"
+              onClick={goNext}
+              className="group inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#1db4a3] px-6 py-2 text-[12px] font-medium leading-5 text-white transition hover:bg-[#189d8e]"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </OnboardingLayout>
+  )
 }

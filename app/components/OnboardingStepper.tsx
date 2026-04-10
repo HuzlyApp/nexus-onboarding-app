@@ -5,6 +5,7 @@ import { Check } from "lucide-react"
 
 interface Props {
   currentStep: number
+  completedThrough?: number
   title?: string
   titleIconSrc?: string
   titleIconAlt?: string
@@ -12,6 +13,7 @@ interface Props {
 
 export default function OnboardingStepper({
   currentStep,
+  completedThrough,
   title,
   titleIconSrc,
   titleIconAlt
@@ -41,7 +43,8 @@ export default function OnboardingStepper({
           <div className="relative flex justify-between">
             {steps.map((step, index) => {
               const stepNumber = index + 1
-              const completed = stepNumber < currentStep
+              const completed =
+                stepNumber <= (completedThrough ?? currentStep - 1)
               const active = stepNumber === currentStep
 
               return (
