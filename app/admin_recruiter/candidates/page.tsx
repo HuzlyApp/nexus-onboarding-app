@@ -386,7 +386,7 @@ export default function CandidatesPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden text-zinc-700">
+            <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">Candidates</div>
@@ -398,7 +398,7 @@ export default function CandidatesPage() {
               Online
             </div>
 
-            <div className="flex items-center gap-2 text-zinc-500">
+            <div className="flex items-center gap-2 text-gray-600">
               <button type="button" className="p-2 rounded-xl hover:bg-zinc-100" aria-label="Messages">
                 <MessageCircle className="w-5 h-5" />
               </button>
@@ -410,7 +410,7 @@ export default function CandidatesPage() {
             <div className="flex items-center gap-3">
               <div className="text-right hidden xs:block">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -422,12 +422,12 @@ export default function CandidatesPage() {
         </header>
 
         <div className="flex-1 p-6 sm:p-8 overflow-auto">
-          <div className="text-xs text-zinc-400 mb-3">Admin - Candidate Listings</div>
+          <div className="text-xs text-gray-600 mb-3">Admin - Candidate Listings</div>
 
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-semibold text-zinc-900">Candidates</h1>
-              <p className="text-zinc-500 mt-1">Manage applicants in one place</p>
+              <h1 className="text-3xl font-semibold text-gray-600">Candidates</h1>
+              <p className="text-gray-600 mt-1">Manage applicants in one place</p>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -439,7 +439,7 @@ export default function CandidatesPage() {
               </button>
 
               <div className="flex items-center bg-white border border-zinc-200 rounded-2xl px-4 sm:px-5 py-3 min-w-0 flex-1 sm:flex-initial sm:min-w-[240px]">
-                <Search className="w-5 h-5 text-zinc-400 mr-3 shrink-0" />
+                <Search className="w-5 h-5 text-gray-600 mr-3 shrink-0" />
                 <input
                   type="search"
                   value={query}
@@ -471,7 +471,7 @@ export default function CandidatesPage() {
                   className="flex items-center justify-center w-12 h-12 border border-zinc-200 bg-white hover:bg-zinc-50 rounded-2xl transition"
                   aria-label="More actions"
                 >
-                  <MoreHorizontal className="w-5 h-5 text-zinc-600" />
+                  <MoreHorizontal className="w-5 h-5 text-gray-600" />
                 </button>
                 {moreMenuOpen ? (
                   <>
@@ -484,7 +484,7 @@ export default function CandidatesPage() {
                     <div className="absolute right-0 top-full mt-2 z-50 min-w-[200px] rounded-2xl border border-zinc-200 bg-white py-2 shadow-lg">
                       <Link
                         href="/admin_recruiter/advanced-search"
-                        className="block px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50"
+                        className="block px-4 py-2.5 text-sm text-gray-600 hover:bg-zinc-50"
                         onClick={() => setMoreMenuOpen(false)}
                       >
                         Advanced search
@@ -500,17 +500,17 @@ export default function CandidatesPage() {
             <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 flex flex-wrap items-center gap-3 sm:gap-4">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <label className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 whitespace-nowrap">Type</span>
+                  <span className="text-xs text-gray-600 whitespace-nowrap">Type</span>
                   <select
                     value={typeFilter}
                     disabled
-                    className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 max-w-[140px]"
+                    className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-gray-600 max-w-[140px]"
                   >
                     <option>Candidates</option>
                   </select>
                 </label>
                 <label className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 whitespace-nowrap">Status</span>
+                  <span className="text-xs text-gray-600 whitespace-nowrap">Status</span>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
@@ -524,7 +524,7 @@ export default function CandidatesPage() {
                   </select>
                 </label>
                 <label className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 whitespace-nowrap">Job Role</span>
+                  <span className="text-xs text-gray-600 whitespace-nowrap">Job Role</span>
                   <select
                     value={jobRoleFilter}
                     onChange={(e) => setJobRoleFilter(e.target.value)}
@@ -539,7 +539,7 @@ export default function CandidatesPage() {
                   </select>
                 </label>
                 <label className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 whitespace-nowrap">Location</span>
+                  <span className="text-xs text-gray-600 whitespace-nowrap">Location</span>
                   <select
                     value={locationFilter}
                     onChange={(e) => setLocationFilter(e.target.value)}
@@ -557,16 +557,16 @@ export default function CandidatesPage() {
             </div>
 
             <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-100 bg-zinc-50/50">
-              <div className="text-sm text-zinc-600">
+              <div className="text-sm text-gray-600">
                 Total:{" "}
-                <span className="font-semibold text-zinc-900">
+                <span className="font-semibold text-gray-600">
                   {loading ? "—" : totalFromApi ?? filtered.length}
                 </span>{" "}
                 {loading ? "" : totalLabel}
               </div>
 
               <div className="flex items-center gap-3 flex-wrap">
-                <span className={`text-xs font-medium ${view === "card" ? "text-teal-700" : "text-zinc-400"}`}>
+                <span className={`text-xs font-medium ${view === "card" ? "text-teal-700" : "text-gray-600"}`}>
                   Card View
                 </span>
                 <button
@@ -585,14 +585,14 @@ export default function CandidatesPage() {
                     }`}
                   />
                 </button>
-                <span className={`text-xs font-medium ${view === "list" ? "text-teal-700" : "text-zinc-400"}`}>
+                <span className={`text-xs font-medium ${view === "list" ? "text-teal-700" : "text-gray-600"}`}>
                   List View
                 </span>
                 {view === "list" ? (
                   <button
                     type="button"
                     onClick={() => setEditColumnsOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-gray-600 hover:bg-zinc-50"
                   >
                     <Columns2 className="h-4 w-4" />
                     Edit columns
@@ -607,14 +607,14 @@ export default function CandidatesPage() {
 
                 if (loading) {
                   return (
-                    <div className="flex flex-col items-center justify-center py-24 text-zinc-500 gap-3">
+                    <div className="flex flex-col items-center justify-center py-24 text-gray-600 gap-3">
                       <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
                       Loading candidates…
                     </div>
                   );
                 }
                 if (filtered.length === 0) {
-                  return <div className="text-center py-24 text-zinc-500">No candidates found.</div>;
+                  return <div className="text-center py-24 text-gray-600">No candidates found.</div>;
                 }
 
                 if (view === "list") {
@@ -624,7 +624,7 @@ export default function CandidatesPage() {
                       <div className="overflow-auto">
                         <table className="min-w-[720px] w-full bg-white">
                           <thead>
-                            <tr className="text-left text-xs uppercase tracking-widest text-zinc-400 border-b border-zinc-100">
+                            <tr className="text-left text-xs uppercase tracking-widest text-gray-600 border-b border-zinc-100">
                               {cols.map((colId) => (
                                 <th key={colId} className="px-4 py-4 font-medium first:pl-6 last:pr-6">
                                   {columnLabel(colId)}
@@ -663,22 +663,22 @@ export default function CandidatesPage() {
                                 {initialsFromName(c.name || "NA")}
                               </div>
                               <div className="min-w-0">
-                                <div className="font-semibold text-zinc-900 truncate text-[15px]">{c.name || "Unnamed"}</div>
-                                <div className="text-[11px] text-zinc-400 mt-0.5">RN #{c.reference}</div>
+                                <div className="font-semibold text-gray-600 truncate text-[15px]">{c.name || "Unnamed"}</div>
+                                <div className="text-[11px] text-gray-600 mt-0.5">RN #{c.reference}</div>
                               </div>
                             </div>
 
                             <div className="flex items-center gap-1.5 shrink-0">
                               <Link
                                 href={`/admin_recruiter/new/attachments/${c.id}`}
-                                className="w-9 h-9 rounded-xl border border-zinc-200 hover:bg-teal-50 hover:border-teal-200 flex items-center justify-center text-zinc-600 hover:text-teal-800 transition"
+                                className="w-9 h-9 rounded-xl border border-zinc-200 hover:bg-teal-50 hover:border-teal-200 flex items-center justify-center text-gray-600 hover:text-teal-800 transition"
                                 aria-label="View document"
                               >
                                 <FileText className="w-4 h-4" />
                               </Link>
                               <Link
                                 href={`/admin_recruiter/new/profile/${c.id}`}
-                                className="w-9 h-9 rounded-xl border border-zinc-200 hover:bg-teal-50 hover:border-teal-200 flex items-center justify-center text-zinc-600 hover:text-teal-800 transition"
+                                className="w-9 h-9 rounded-xl border border-zinc-200 hover:bg-teal-50 hover:border-teal-200 flex items-center justify-center text-gray-600 hover:text-teal-800 transition"
                                 aria-label="View profile"
                               >
                                 <Eye className="w-4 h-4" />
@@ -687,7 +687,7 @@ export default function CandidatesPage() {
                           </div>
 
                           <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
-                            <div className="flex items-center gap-2 text-xs text-zinc-500">
+                            <div className="flex items-center gap-2 text-xs text-gray-600">
                               <CalendarDays className="w-4 h-4 text-teal-600 shrink-0" />
                               <span>{formatDateTime(c.createdAt)}</span>
                             </div>
@@ -696,7 +696,7 @@ export default function CandidatesPage() {
                             </span>
                           </div>
 
-                          <div className="mt-5 space-y-2.5 text-xs text-zinc-600">
+                          <div className="mt-5 space-y-2.5 text-xs text-gray-600">
                             <div className="flex items-start gap-2.5">
                               <Mail className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
                               <span className="truncate">{c.email || "—"}</span>
@@ -726,7 +726,7 @@ export default function CandidatesPage() {
                             }, 400);
                           }}
                           disabled={loadMoreLoading}
-                          className="inline-flex items-center gap-2 px-8 py-3 rounded-2xl border-2 border-zinc-200 bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-teal-300 transition disabled:opacity-60"
+                          className="inline-flex items-center gap-2 px-8 py-3 rounded-2xl border-2 border-zinc-200 bg-white text-sm font-medium text-gray-600 hover:bg-zinc-50 hover:border-teal-300 transition disabled:opacity-60"
                         >
                           {loadMoreLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin text-teal-600" />

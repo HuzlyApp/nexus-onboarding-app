@@ -64,22 +64,22 @@ function ResumeViewer() {
         <div className="w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden">
           <div className="p-10">
             <div className="text-2xl font-bold tracking-tight">JOHN DOE</div>
-            <div className="mt-2 text-xs text-zinc-500 max-w-xl">
+            <div className="mt-2 text-xs text-gray-600 max-w-xl">
               Summary statement and skills preview (placeholder). Replace this with the actual resume
               PDF when available.
             </div>
 
-            <div className="mt-6 grid grid-cols-12 gap-6 text-[11px] leading-5 text-zinc-700">
+            <div className="mt-6 grid grid-cols-12 gap-6 text-[11px] leading-5 text-gray-600">
               <div className="col-span-4">
-                <div className="font-semibold text-zinc-900">CONTACT</div>
-                <div className="mt-2 space-y-1 text-zinc-600">
+                <div className="font-semibold text-gray-600">CONTACT</div>
+                <div className="mt-2 space-y-1 text-gray-600">
                   <div>555-555-5555</div>
                   <div>example@email.com</div>
                   <div>Seattle, WA</div>
                 </div>
 
-                <div className="mt-6 font-semibold text-zinc-900">SKILLS</div>
-                <ul className="mt-2 space-y-1 text-zinc-600 list-disc pl-4">
+                <div className="mt-6 font-semibold text-gray-600">SKILLS</div>
+                <ul className="mt-2 space-y-1 text-gray-600 list-disc pl-4">
                   <li>Patient care</li>
                   <li>Medication administration</li>
                   <li>Emergency response</li>
@@ -88,28 +88,28 @@ function ResumeViewer() {
               </div>
 
               <div className="col-span-8">
-                <div className="font-semibold text-zinc-900">SUMMARY</div>
-                <p className="mt-2 text-zinc-600">
+                <div className="font-semibold text-gray-600">SUMMARY</div>
+                <p className="mt-2 text-gray-600">
                   Knowledgeable healthcare technician bringing strengths in interview and emergency
                   care. Skilled in routine treatments and ventilator support.
                 </p>
 
-                <div className="mt-5 font-semibold text-zinc-900">PROFESSIONAL SKILLS</div>
-                <ul className="mt-2 space-y-1 text-zinc-600 list-disc pl-4">
+                <div className="mt-5 font-semibold text-gray-600">PROFESSIONAL SKILLS</div>
+                <ul className="mt-2 space-y-1 text-gray-600 list-disc pl-4">
                   <li>Patient preparation and monitoring</li>
                   <li>Assisted clinical operations</li>
                   <li>Collaborated with care teams</li>
                 </ul>
 
-                <div className="mt-5 font-semibold text-zinc-900">WORK HISTORY</div>
-                <div className="mt-2 space-y-3 text-zinc-600">
+                <div className="mt-5 font-semibold text-gray-600">WORK HISTORY</div>
+                <div className="mt-2 space-y-3 text-gray-600">
                   <div>
-                    <div className="font-medium text-zinc-800">Health Care Technician</div>
-                    <div className="text-zinc-500">May 2022 – Current • Mercy Hospital</div>
+                    <div className="font-medium text-gray-600">Health Care Technician</div>
+                    <div className="text-gray-600">May 2022 – Current • Mercy Hospital</div>
                   </div>
                   <div>
-                    <div className="font-medium text-zinc-800">Assisted Living Aide</div>
-                    <div className="text-zinc-500">Jan 2020 – May 2022 • Hope Care</div>
+                    <div className="font-medium text-gray-600">Assisted Living Aide</div>
+                    <div className="text-gray-600">Jan 2020 – May 2022 • Hope Care</div>
                   </div>
                 </div>
               </div>
@@ -135,8 +135,8 @@ export default function NewApplicantProfileResumeDemoPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -147,7 +147,7 @@ export default function NewApplicantProfileResumeDemoPage() {
     <Link
       href={href}
       className={`text-xs px-4 py-2 rounded-2xl transition ${
-        active ? "bg-teal-700 text-white" : "text-zinc-600 hover:bg-white/60"
+        active ? "bg-teal-700 text-white" : "text-gray-600 hover:bg-white/60"
       }`}
     >
       {label}
@@ -238,16 +238,16 @@ export default function NewApplicantProfileResumeDemoPage() {
               <Menu className="w-5 h-5" />
             </button>
             <div>
-              <div className="text-xs text-zinc-400">Admin - New Applicant Detailed Page - Resume</div>
-              <div className="text-lg font-semibold text-zinc-900">Candidates</div>
+              <div className="text-xs text-gray-600">Admin - New Applicant Detailed Page - Resume</div>
+              <div className="text-lg font-semibold text-gray-600">Candidates</div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden" />
             <div className="text-sm">
-              <div className="font-medium text-zinc-900">Sean Smith</div>
-              <div className="text-xs text-zinc-400 -mt-0.5">Administrator</div>
+              <div className="font-medium text-gray-600">Sean Smith</div>
+              <div className="text-xs text-gray-600 -mt-0.5">Administrator</div>
             </div>
           </div>
         </header>
@@ -258,18 +258,18 @@ export default function NewApplicantProfileResumeDemoPage() {
 
             <div className="p-6 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 grid place-items-center text-zinc-700">
+                <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 grid place-items-center text-gray-600">
                   {initials(candidateName)}
                 </div>
                 <div>
                   <div className="flex items-center gap-3">
-                    <div className="text-lg font-semibold text-zinc-900">{candidateName}</div>
-                    <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                    <div className="text-lg font-semibold text-gray-600">{candidateName}</div>
+                    <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                       {candidateStatus}
                     </span>
                   </div>
-                  <div className="text-xs text-zinc-500">{candidateRole}</div>
-                  <div className="text-xs text-zinc-400">{candidateLocation}</div>
+                  <div className="text-xs text-gray-600">{candidateRole}</div>
+                  <div className="text-xs text-gray-600">{candidateLocation}</div>
                 </div>
               </div>
 

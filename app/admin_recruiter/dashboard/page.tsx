@@ -180,11 +180,11 @@ export default function RecruiterDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div>
-              <div className="text-xs text-zinc-400">Admin - Dashboard</div>
+              <div className="text-xs text-gray-600">Admin - Dashboard</div>
               <div className="font-semibold text-2xl">Dashboard</div>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function RecruiterDashboard() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -213,13 +213,13 @@ export default function RecruiterDashboard() {
           <div className="max-w-[1320px] mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
               <div>
-                <div className="text-3xl font-semibold text-zinc-900">Overview</div>
-                <div className="text-sm text-zinc-500 mt-1">Quick access to applicant pipelines and workers.</div>
+                <div className="text-3xl font-semibold text-gray-600">Overview</div>
+                <div className="text-sm text-gray-600 mt-1">Quick access to applicant pipelines and workers.</div>
               </div>
 
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center bg-white border border-zinc-200 rounded-2xl px-5 py-3">
-                  <Search className="w-5 h-5 text-zinc-400 mr-3" />
+                  <Search className="w-5 h-5 text-gray-600 mr-3" />
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -244,10 +244,10 @@ export default function RecruiterDashboard() {
                 className="bg-white border border-zinc-200 rounded-3xl p-6 hover:shadow-sm transition"
               >
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-zinc-500">Total workers</div>
+                  <div className="text-sm text-gray-600">Total workers</div>
                   <Sparkles className="w-5 h-5 text-teal-700" />
                 </div>
-                <div className="mt-3 text-3xl font-semibold text-zinc-900">
+                <div className="mt-3 text-3xl font-semibold text-gray-600">
                   {loading ? "—" : String(workers.length)}
                 </div>
                 <div className="mt-4 inline-flex items-center gap-2 text-sm text-teal-700">
@@ -256,7 +256,7 @@ export default function RecruiterDashboard() {
               </Link>
 
               {[
-                { key: "new" as const, label: "New applicants", href: "/admin_recruiter/new", chip: "New", chipClass: "bg-slate-100 text-slate-700" },
+                { key: "new" as const, label: "New applicants", href: "/admin_recruiter/new", chip: "New", chipClass: "bg-slate-100 text-gray-600" },
                 { key: "pending" as const, label: "Pending applicants", href: "/admin_recruiter/pending", chip: "Pending", chipClass: "bg-amber-100 text-amber-800" },
                 { key: "approved" as const, label: "Approved applicants", href: "/admin_recruiter/approved", chip: "Approved", chipClass: "bg-emerald-100 text-emerald-800" },
                 { key: "disapproved" as const, label: "Disapproved applicants", href: "/admin_recruiter/disapproved", chip: "Disapproved", chipClass: "bg-rose-100 text-rose-800" },
@@ -267,10 +267,10 @@ export default function RecruiterDashboard() {
                   className="bg-white border border-zinc-200 rounded-3xl p-6 hover:shadow-sm transition"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-zinc-500">{c.label}</div>
+                    <div className="text-sm text-gray-600">{c.label}</div>
                     <span className={`text-xs px-3 py-1 rounded-full font-medium ${c.chipClass}`}>{c.chip}</span>
                   </div>
-                  <div className="mt-3 text-3xl font-semibold text-zinc-900">
+                  <div className="mt-3 text-3xl font-semibold text-gray-600">
                     {loading ? "—" : String(counts[c.key])}
                   </div>
                   <div className="mt-4 inline-flex items-center gap-2 text-sm text-teal-700">
@@ -284,8 +284,8 @@ export default function RecruiterDashboard() {
             <div className="mt-8 bg-white border border-zinc-200 rounded-3xl overflow-hidden">
               <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-zinc-900">Recent workers</div>
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-sm font-semibold text-gray-600">Recent workers</div>
+                  <div className="text-xs text-gray-600">
                     Showing {recent.length} of {filtered.length}
                   </div>
                 </div>
@@ -298,14 +298,14 @@ export default function RecruiterDashboard() {
               </div>
 
               {loading ? (
-                <div className="p-6 text-zinc-500">Loading…</div>
+                <div className="p-6 text-gray-600">Loading…</div>
               ) : recent.length === 0 ? (
-                <div className="p-6 text-zinc-500">No workers found.</div>
+                <div className="p-6 text-gray-600">No workers found.</div>
               ) : (
                 <div className="overflow-auto">
                   <table className="min-w-[980px] w-full">
                     <thead>
-                      <tr className="text-left text-xs uppercase tracking-widest text-zinc-400 border-b border-zinc-100">
+                      <tr className="text-left text-xs uppercase tracking-widest text-gray-600 border-b border-zinc-100">
                         <th className="px-6 py-4 font-medium">Name</th>
                         <th className="px-4 py-4 font-medium">Job Role</th>
                         <th className="px-4 py-4 font-medium">Created</th>
@@ -319,10 +319,10 @@ export default function RecruiterDashboard() {
                         const location = [w.city, w.state].filter(Boolean).join(", ") || "—";
                         return (
                           <tr key={w.id} className="border-b border-zinc-100 hover:bg-zinc-50/70">
-                            <td className="px-6 py-4 text-sm text-zinc-900 font-medium">{name}</td>
-                            <td className="px-4 py-4 text-sm text-zinc-600">{w.job_role || "—"}</td>
-                            <td className="px-4 py-4 text-sm text-zinc-600">{formatDate(w.created_at)}</td>
-                            <td className="px-6 py-4 text-sm text-zinc-600">{location}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600 font-medium">{name}</td>
+                            <td className="px-4 py-4 text-sm text-gray-600">{w.job_role || "—"}</td>
+                            <td className="px-4 py-4 text-sm text-gray-600">{formatDate(w.created_at)}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{location}</td>
                           </tr>
                         );
                       })}

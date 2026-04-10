@@ -185,8 +185,8 @@ export default function NewApplicantAuthorizationFilledPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -278,7 +278,7 @@ export default function NewApplicantAuthorizationFilledPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -293,7 +293,7 @@ export default function NewApplicantAuthorizationFilledPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -306,7 +306,7 @@ export default function NewApplicantAuthorizationFilledPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - New Applicant Detailed Page - Authorization (filled)
             </div>
 
@@ -323,18 +323,18 @@ export default function NewApplicantAuthorizationFilledPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">
+                    <div className="text-lg font-semibold text-gray-600">
                       {loading ? "Loading..." : candidateName}
                     </div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                     {loading ? "…" : statusLabel}
                   </span>
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
@@ -366,16 +366,16 @@ export default function NewApplicantAuthorizationFilledPage() {
               <div className="p-6 grid grid-cols-12 gap-6">
                 <section className="col-span-7 space-y-6">
                   <div>
-                    <div className="text-sm font-semibold text-zinc-900 mb-3">Authorization</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-3">Authorization</div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <div className="text-xs text-zinc-500">1. Authorization</div>
-                        <div className="text-xs text-zinc-500">
+                        <div className="text-xs text-gray-600">1. Authorization</div>
+                        <div className="text-xs text-gray-600">
                           {authSigned ? (
                             <>
-                              Signed <span className="font-medium text-zinc-800">1</span> of{" "}
-                              <span className="font-medium text-zinc-800">1</span>
+                              Signed <span className="font-medium text-gray-600">1</span> of{" "}
+                              <span className="font-medium text-gray-600">1</span>
                             </>
                           ) : (
                             <>Packet {authHasPacket ? "created" : "not linked"}</>
@@ -389,7 +389,7 @@ export default function NewApplicantAuthorizationFilledPage() {
                             <div className="text-xs font-medium text-teal-700 truncate">
                               {authFileLabel}
                             </div>
-                            <div className="text-[11px] text-zinc-500">
+                            <div className="text-[11px] text-gray-600">
                               {signeasy?.document_id
                                 ? `SignEasy document id: ${signeasy.document_id}`
                                 : "E-sign workflow"}
@@ -424,7 +424,7 @@ export default function NewApplicantAuthorizationFilledPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/60 px-4 py-6 text-xs text-zinc-500">
+                        <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/60 px-4 py-6 text-xs text-gray-600">
                           No SignEasy authorization packet linked for this worker yet.
                         </div>
                       )}
@@ -432,7 +432,7 @@ export default function NewApplicantAuthorizationFilledPage() {
                   </div>
 
                   <div>
-                    <div className="text-sm font-semibold text-zinc-900 mb-3">Documents</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-3">Documents</div>
                     <div className="space-y-4">
                       {documentSections.map((d, idx) => {
                         const up = d.slots.filter((s) => s.url).length;
@@ -443,13 +443,13 @@ export default function NewApplicantAuthorizationFilledPage() {
                             className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5"
                           >
                             <div className="flex items-center justify-between mb-3">
-                              <div className="text-xs text-zinc-500">
+                              <div className="text-xs text-gray-600">
                                 {idx + 2}. {d.title}
                               </div>
-                              <div className="text-xs text-zinc-500">
+                              <div className="text-xs text-gray-600">
                                 Uploaded{" "}
-                                <span className="font-medium text-zinc-800">{up}</span> of{" "}
-                                <span className="font-medium text-zinc-800">{tot}</span>
+                                <span className="font-medium text-gray-600">{up}</span> of{" "}
+                                <span className="font-medium text-gray-600">{tot}</span>
                               </div>
                             </div>
 
@@ -463,7 +463,7 @@ export default function NewApplicantAuthorizationFilledPage() {
                                     <div className="text-xs font-medium text-teal-700 truncate">
                                       {slot.url ? fileLabelFromUrl(slot.url) : `${slot.label} — not uploaded`}
                                     </div>
-                                    <div className="text-[11px] text-zinc-500">{slot.label}</div>
+                                    <div className="text-[11px] text-gray-600">{slot.label}</div>
                                   </div>
                                   <FileActions url={slot.url} />
                                 </div>
@@ -478,12 +478,12 @@ export default function NewApplicantAuthorizationFilledPage() {
 
                 <section className="col-span-5">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                    <div className="text-sm font-semibold text-zinc-900 mb-4">Review</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-4">Review</div>
 
                     <div className="space-y-6">
                       {reviewRows.map((row) => (
                         <div key={row.id} className="flex items-center justify-between gap-4 flex-wrap">
-                          <div className="text-xs text-zinc-500">{row.title}</div>
+                          <div className="text-xs text-gray-600">{row.title}</div>
                           <div className="flex items-center gap-2 flex-wrap justify-end">
                             <button
                               type="button"

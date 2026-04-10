@@ -186,7 +186,7 @@ export default function WorkersPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen((v) => !v)}
-              className="lg:hidden text-zinc-700"
+              className="lg:hidden text-gray-600"
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -201,7 +201,7 @@ export default function WorkersPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -216,7 +216,7 @@ export default function WorkersPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-semibold">Workers</h1>
-              <p className="text-zinc-500">Manage workers in one place</p>
+              <p className="text-gray-600">Manage workers in one place</p>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
@@ -225,7 +225,7 @@ export default function WorkersPage() {
               </button>
 
               <div className="flex items-center bg-white border border-zinc-200 rounded-2xl px-5 py-3">
-                <Search className="w-5 h-5 text-zinc-400 mr-3" />
+                <Search className="w-5 h-5 text-gray-600 mr-3" />
                 <input
                   type="text"
                   value={query}
@@ -238,9 +238,9 @@ export default function WorkersPage() {
           </div>
 
           {loading ? (
-            <div className="text-center py-20 text-zinc-500">Loading workers...</div>
+            <div className="text-center py-20 text-gray-600">Loading workers...</div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-20 text-zinc-500">No workers found.</div>
+            <div className="text-center py-20 text-gray-600">No workers found.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filtered.map((w) => (
@@ -256,11 +256,11 @@ export default function WorkersPage() {
                           <div className="text-teal-600 text-sm truncate">{w.role}</div>
                         </div>
                       </div>
-                      <div className="mt-4 flex items-center gap-2 text-[11px] text-zinc-500">
+                      <div className="mt-4 flex items-center gap-2 text-[11px] text-gray-600">
                         <Calendar className="w-4 h-4 text-teal-700" />
                         {formatDate(w.createdAt)}
                       </div>
-                      <div className="mt-3 space-y-2 text-xs text-zinc-600">
+                      <div className="mt-3 space-y-2 text-xs text-gray-600">
                         <div className="truncate">{w.email || "—"}</div>
                         <div className="truncate">{w.phone || "—"}</div>
                         <div className="truncate">{w.location}</div>

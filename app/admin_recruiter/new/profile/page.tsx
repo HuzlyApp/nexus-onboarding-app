@@ -144,15 +144,15 @@ export default function ProfileIndexPage() {
             <button
               type="button"
               onClick={() => setSidebarOpen((v) => !v)}
-              className="lg:hidden text-zinc-700"
+              className="lg:hidden text-gray-600"
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="flex items-center gap-3">
               <UserSquare2 className="w-6 h-6 text-teal-700" />
               <div>
-                <div className="font-semibold text-xl text-zinc-900">Applicant profile</div>
-                <div className="text-xs text-zinc-500">Choose a worker row to open Details</div>
+                <div className="font-semibold text-xl text-gray-600">Applicant profile</div>
+                <div className="text-xs text-gray-600">Choose a worker row to open Details</div>
               </div>
             </div>
           </div>
@@ -169,8 +169,8 @@ export default function ProfileIndexPage() {
           <div className="max-w-5xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-2xl font-semibold text-zinc-900">Worker table</h1>
-                <p className="text-sm text-zinc-500 mt-1">
+                <h1 className="text-2xl font-semibold text-gray-600">Worker table</h1>
+                <p className="text-sm text-gray-600 mt-1">
                   Data from <code className="text-xs bg-zinc-100 px-1 rounded">/api/workers</code> · Profile
                   route{" "}
                   <code className="text-xs bg-zinc-100 px-1 rounded">/admin_recruiter/new/profile/[id]</code>
@@ -189,7 +189,7 @@ export default function ProfileIndexPage() {
                     .catch(() => setError("Refresh failed"))
                     .finally(() => setLoading(false));
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50"
+                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-2.5 text-sm text-gray-600 hover:bg-zinc-50"
               >
                 <RefreshCw className="w-4 h-4" />
                 Refresh
@@ -202,7 +202,7 @@ export default function ProfileIndexPage() {
                   type="button"
                   onClick={() => setListMode("new")}
                   className={`rounded-xl px-4 py-1.5 text-xs font-medium transition ${
-                    listMode === "new" ? "bg-white shadow text-zinc-900" : "text-zinc-600 hover:text-zinc-900"
+                    listMode === "new" ? "bg-white shadow text-gray-600" : "text-gray-600 hover:text-gray-600"
                   }`}
                 >
                   New only
@@ -211,19 +211,19 @@ export default function ProfileIndexPage() {
                   type="button"
                   onClick={() => setListMode("all")}
                   className={`rounded-xl px-4 py-1.5 text-xs font-medium transition ${
-                    listMode === "all" ? "bg-white shadow text-zinc-900" : "text-zinc-600 hover:text-zinc-900"
+                    listMode === "all" ? "bg-white shadow text-gray-600" : "text-gray-600 hover:text-gray-600"
                   }`}
                 >
                   All workers
                 </button>
               </div>
               <div className="flex flex-1 items-center bg-white border border-zinc-200 rounded-2xl px-4 py-2.5 max-w-md">
-                <Search className="w-5 h-5 text-zinc-400 mr-2 shrink-0" />
+                <Search className="w-5 h-5 text-gray-600 mr-2 shrink-0" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search by name, role, location, or id"
-                  className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+                  className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-gray-600"
                 />
               </div>
             </div>
@@ -238,7 +238,7 @@ export default function ProfileIndexPage() {
               <div className="overflow-x-auto">
                 <table className="min-w-[720px] w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-wider text-zinc-400 border-b border-zinc-100 bg-zinc-50/80">
+                    <tr className="text-left text-xs uppercase tracking-wider text-gray-600 border-b border-zinc-100 bg-zinc-50/80">
                       <th className="px-5 py-3 font-medium">Name</th>
                       <th className="px-4 py-3 font-medium">Job role</th>
                       <th className="px-4 py-3 font-medium">Location</th>
@@ -249,13 +249,13 @@ export default function ProfileIndexPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="px-5 py-16 text-center text-zinc-500">
+                        <td colSpan={5} className="px-5 py-16 text-center text-gray-600">
                           Loading workers…
                         </td>
                       </tr>
                     ) : filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-5 py-16 text-center text-zinc-500">
+                        <td colSpan={5} className="px-5 py-16 text-center text-gray-600">
                           No workers found.{" "}
                           <Link href="/admin_recruiter/new" className="text-teal-700 font-medium hover:underline">
                             Go to New applicants
@@ -272,9 +272,9 @@ export default function ProfileIndexPage() {
                             key={w.id}
                             className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/80"
                           >
-                            <td className="px-5 py-3.5 font-medium text-zinc-900">{name}</td>
-                            <td className="px-4 py-3.5 text-zinc-600">{w.job_role || "—"}</td>
-                            <td className="px-4 py-3.5 text-zinc-600">{loc}</td>
+                            <td className="px-5 py-3.5 font-medium text-gray-600">{name}</td>
+                            <td className="px-4 py-3.5 text-gray-600">{w.job_role || "—"}</td>
+                            <td className="px-4 py-3.5 text-gray-600">{loc}</td>
                             <td className="px-4 py-3.5">
                               <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
                                 {titleCaseStatus(w.status)}
@@ -298,7 +298,7 @@ export default function ProfileIndexPage() {
               </div>
             </div>
 
-            <p className="mt-4 text-xs text-zinc-400">
+            <p className="mt-4 text-xs text-gray-600">
               Total: {filtered.length}{" "}
               {query.trim() ? `(filtered from ${workers.length})` : `worker${workers.length === 1 ? "" : "s"}`}
             </p>

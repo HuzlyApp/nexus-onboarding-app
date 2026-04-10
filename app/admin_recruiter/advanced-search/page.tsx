@@ -149,7 +149,7 @@ export default function AdvancedSearchPage() {
       {/* overlay modal like screenshot */}
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-6">
-          <div className="w-full max-w-3xl rounded-3xl bg-white border border-zinc-200 shadow-xl overflow-hidden text-zinc-600">
+          <div className="w-full max-w-3xl rounded-3xl bg-white border border-zinc-200 shadow-xl overflow-hidden text-gray-600">
             <div className="p-6 flex items-center justify-between">
               <div className="text-lg font-semibold">Advanced Search</div>
               <button
@@ -178,7 +178,7 @@ export default function AdvancedSearchPage() {
 
               <div className="mt-4 grid grid-cols-12 gap-3 items-end">
                 <div className="col-span-12 sm:col-span-4">
-                  <div className="text-xs text-zinc-600 mb-1">Show me worker within</div>
+                  <div className="text-xs text-gray-600 mb-1">Show me worker within</div>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -194,7 +194,7 @@ export default function AdvancedSearchPage() {
                 </div>
 
                 <div className="col-span-12 sm:col-span-8">
-                  <div className="text-xs text-zinc-600 mb-1">of</div>
+                  <div className="text-xs text-gray-600 mb-1">of</div>
                   <div className="relative">
                     <input
                       value={placeQuery}
@@ -267,8 +267,8 @@ export default function AdvancedSearchPage() {
       ) : null}
 
       {/* Page fallback background */}
-      <div className="p-8 text-zinc-600">
-        <div className="text-xs text-zinc-400 mb-2">Admin - Advanced Search</div>
+      <div className="p-8 text-gray-600">
+        <div className="text-xs text-gray-600 mb-2">Admin - Advanced Search</div>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-semibold">Candidates</div>

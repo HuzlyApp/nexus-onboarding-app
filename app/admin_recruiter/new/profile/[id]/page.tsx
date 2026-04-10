@@ -151,8 +151,8 @@ export default function NewApplicantProfilePage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -246,7 +246,7 @@ export default function NewApplicantProfilePage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">{isWorkerRoute ? "Worker" : "New Applicant"}</div>
@@ -261,7 +261,7 @@ export default function NewApplicantProfilePage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -274,7 +274,7 @@ export default function NewApplicantProfilePage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - {isWorkerRoute ? "Worker" : "New Applicant"} Detailed Page - Details
             </div>
 
@@ -292,22 +292,22 @@ export default function NewApplicantProfilePage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-3 flex-wrap">
-                      <div className="text-lg font-semibold text-zinc-900">
+                      <div className="text-lg font-semibold text-gray-600">
                         {loading ? "Loading..." : candidateName}
                       </div>
-                      <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                      <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                         {w?.status_label ?? "—"}
                       </span>
                     </div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
-                    <div className="text-xs text-zinc-400">{candidateLocation}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
+                    <div className="text-xs text-gray-600">{candidateLocation}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm"
+                    className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm"
                   >
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
@@ -339,13 +339,13 @@ export default function NewApplicantProfilePage() {
                   </Link>
                   <Link
                     href={`${base}/profile/resume/${id}`}
-                    className="text-xs px-4 py-2 rounded-2xl text-zinc-600 hover:bg-white/60"
+                    className="text-xs px-4 py-2 rounded-2xl text-gray-600 hover:bg-white/60"
                   >
                     Resume
                   </Link>
                   <Link
                     href={`${base}/profile/notes/${id}`}
-                    className="text-xs px-4 py-2 rounded-2xl text-zinc-600 hover:bg-white/60"
+                    className="text-xs px-4 py-2 rounded-2xl text-gray-600 hover:bg-white/60"
                   >
                     Notes
                   </Link>
@@ -355,7 +355,7 @@ export default function NewApplicantProfilePage() {
               <div className="p-6 grid grid-cols-12 gap-6">
                 <section className="col-span-12 lg:col-span-4 space-y-6">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                    <div className="text-sm font-semibold text-zinc-900 mb-4">Candidate Details</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-4">Candidate Details</div>
 
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       {(
@@ -392,8 +392,8 @@ export default function NewApplicantProfilePage() {
                         ] as const
                       ).map(([k, v]) => (
                         <div key={k} className="col-span-2 grid grid-cols-2 gap-3">
-                          <div className="text-zinc-400">{k}</div>
-                          <div className="text-zinc-700 break-all">{v}</div>
+                          <div className="text-gray-600">{k}</div>
+                          <div className="text-gray-600 break-all">{v}</div>
                         </div>
                       ))}
                     </div>
@@ -401,7 +401,7 @@ export default function NewApplicantProfilePage() {
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="text-sm font-semibold text-zinc-900">References</div>
+                      <div className="text-sm font-semibold text-gray-600">References</div>
                     </div>
                     {data && data.references.length > 0 ? (
                       <div className="space-y-3">
@@ -410,37 +410,37 @@ export default function NewApplicantProfilePage() {
                             key={r.id}
                             className="rounded-xl border border-zinc-200/70 bg-white/60 p-3 text-xs"
                           >
-                            <div className="font-medium text-zinc-800">
+                            <div className="font-medium text-gray-600">
                               Reference {i + 1}: {r.name}
                             </div>
-                            <div className="text-zinc-500 mt-1">{r.phone ?? "—"}</div>
-                            <div className="text-zinc-500">{r.email ?? "—"}</div>
+                            <div className="text-gray-600 mt-1">{r.phone ?? "—"}</div>
+                            <div className="text-gray-600">{r.email ?? "—"}</div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-xs text-zinc-500">No references on file yet.</div>
+                      <div className="text-xs text-gray-600">No references on file yet.</div>
                     )}
                   </div>
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="text-sm font-semibold text-zinc-900">License &amp; documents</div>
+                      <div className="text-sm font-semibold text-gray-600">License &amp; documents</div>
                     </div>
                     {data?.documents?.nursing_license_url ? (
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 text-xs text-zinc-700">
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 text-xs text-gray-600">
                         Nursing license document on file. TB / CPR / ID flags:{" "}
                         {[data.documents.tb_test_url && "TB", data.documents.cpr_certification_url && "CPR", data.documents.identity_uploaded && "ID"]
                           .filter(Boolean)
                           .join(", ") || "—"}
                       </div>
                     ) : (
-                      <div className="text-xs text-zinc-500">No nursing license document uploaded yet.</div>
+                      <div className="text-xs text-gray-600">No nursing license document uploaded yet.</div>
                     )}
                   </div>
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                    <div className="text-sm font-semibold text-zinc-900 mb-4">Activity</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-4">Activity</div>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       {(
                         [
@@ -450,25 +450,25 @@ export default function NewApplicantProfilePage() {
                         ] as const
                       ).map(([k, v]) => (
                         <div key={k} className="col-span-2 grid grid-cols-2 gap-3">
-                          <div className="text-zinc-400">{k}</div>
-                          <div className="text-zinc-700">{v}</div>
+                          <div className="text-gray-600">{k}</div>
+                          <div className="text-gray-600">{v}</div>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                    <div className="text-sm font-semibold text-zinc-900 mb-4">Activity History</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-4">Activity History</div>
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-full bg-teal-600/10 flex items-center justify-center shrink-0">
                           <CheckCircle2 className="w-4 h-4 text-teal-700" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-xs text-zinc-700">
+                          <div className="text-xs text-gray-600">
                             Record created for {candidateName}
                           </div>
-                          <div className="text-[11px] text-zinc-400">
+                          <div className="text-[11px] text-gray-600">
                             {formatRelative(data?.activity.created_at)}
                           </div>
                         </div>
@@ -480,8 +480,8 @@ export default function NewApplicantProfilePage() {
                             <CheckCircle2 className="w-4 h-4 text-teal-700" />
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs text-zinc-700">Profile last updated</div>
-                            <div className="text-[11px] text-zinc-400">
+                            <div className="text-xs text-gray-600">Profile last updated</div>
+                            <div className="text-[11px] text-gray-600">
                               {formatRelative(data.activity.updated_at)}
                             </div>
                           </div>
@@ -494,65 +494,65 @@ export default function NewApplicantProfilePage() {
                 <section className="col-span-12 lg:col-span-8 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="text-sm font-semibold text-zinc-900 mb-2">Education</div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-sm font-semibold text-gray-600 mb-2">Education</div>
+                      <div className="text-xs text-gray-600">
                         {data?.requirements?.resume_path
                           ? "Structured education fields are not stored separately; see the uploaded resume."
                           : "From resume (not stored on worker yet)"}
                       </div>
-                      <div className="mt-2 text-xs text-zinc-700">—</div>
+                      <div className="mt-2 text-xs text-gray-600">—</div>
                     </div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="text-sm font-semibold text-zinc-900 mb-2">Experience</div>
-                      <div className="text-xs text-zinc-500">Job role</div>
-                      <div className="mt-2 text-xs text-zinc-700">{candidateRole}</div>
+                      <div className="text-sm font-semibold text-gray-600 mb-2">Experience</div>
+                      <div className="text-xs text-gray-600">Job role</div>
+                      <div className="mt-2 text-xs text-gray-600">{candidateRole}</div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="text-sm font-semibold text-zinc-900 mb-2">Skills</div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-sm font-semibold text-gray-600 mb-2">Skills</div>
+                      <div className="text-xs text-gray-600">
                         Structured skills will appear when stored with the applicant profile.
                       </div>
-                      <div className="mt-2 text-xs text-zinc-700">—</div>
+                      <div className="mt-2 text-xs text-gray-600">—</div>
                     </div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="text-sm font-semibold text-zinc-900 mb-2">Facilities assigned</div>
-                      <div className="text-xs text-zinc-500">No facility assignments in database yet.</div>
+                      <div className="text-sm font-semibold text-gray-600 mb-2">Facilities assigned</div>
+                      <div className="text-xs text-gray-600">No facility assignments in database yet.</div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="text-sm font-semibold text-zinc-900">Onboarding Progress</div>
+                        <div className="text-sm font-semibold text-gray-600">Onboarding Progress</div>
                         <span className="text-[11px] px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
                           In Progress
                         </span>
                       </div>
 
-                      <div className="space-y-3 text-xs text-zinc-700">
+                      <div className="space-y-3 text-xs text-gray-600">
                         {(data?.onboardingSteps ?? []).map((s) => (
                           <div key={s.id} className="flex items-center gap-3">
                             <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${stepDotClass(s.state)}`} />
                             <span className="flex-1">{s.label}</span>
                             {s.detail ? (
-                              <span className="text-[11px] text-zinc-400">{s.detail}</span>
+                              <span className="text-[11px] text-gray-600">{s.detail}</span>
                             ) : null}
                           </div>
                         ))}
                         {loading ? (
-                          <div className="text-zinc-400">Loading progress…</div>
+                          <div className="text-gray-600">Loading progress…</div>
                         ) : null}
                       </div>
                     </div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                      <div className="text-sm font-semibold text-zinc-900 mb-3">Skill assessments</div>
-                      <div className="text-xs text-zinc-600">
+                      <div className="text-sm font-semibold text-gray-600 mb-3">Skill assessments</div>
+                      <div className="text-xs text-gray-600">
                         Completed {data?.skillAssessments.completed ?? 0} of {data?.skillAssessments.total ?? 0}{" "}
                         tracked quizzes.
                       </div>
@@ -560,8 +560,8 @@ export default function NewApplicantProfilePage() {
                   </div>
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                    <div className="text-sm font-semibold text-zinc-900 mb-3">Remarks</div>
-                    <div className="text-xs text-zinc-500 mb-4">Use pipeline actions from the New / Pending lists to approve or move applicants.</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-3">Remarks</div>
+                    <div className="text-xs text-gray-600 mb-4">Use pipeline actions from the New / Pending lists to approve or move applicants.</div>
                     <div className="flex flex-wrap gap-2">
                       <Link
                         href="/admin_recruiter/new"
@@ -574,7 +574,7 @@ export default function NewApplicantProfilePage() {
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="text-sm font-semibold text-zinc-900">Notes</div>
+                      <div className="text-sm font-semibold text-gray-600">Notes</div>
                       <Link
                         href={`${base}/profile/notes/${id}`}
                         className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 bg-white/70 hover:bg-white transition"
@@ -582,7 +582,7 @@ export default function NewApplicantProfilePage() {
                         Open notes
                       </Link>
                     </div>
-                    <div className="text-xs text-zinc-500">Use the Notes tab for free-form recruiter notes.</div>
+                    <div className="text-xs text-gray-600">Use the Notes tab for free-form recruiter notes.</div>
                   </div>
                 </section>
               </div>

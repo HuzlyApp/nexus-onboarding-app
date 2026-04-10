@@ -116,8 +116,8 @@ export default function NewApplicantActivitiesPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -211,7 +211,7 @@ export default function NewApplicantActivitiesPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -225,7 +225,7 @@ export default function NewApplicantActivitiesPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -238,7 +238,7 @@ export default function NewApplicantActivitiesPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">Admin - New Applicant Detailed Page - Activities</div>
+            <div className="mb-5 text-xs text-gray-600">Admin - New Applicant Detailed Page - Activities</div>
 
             {loadError ? (
               <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -254,18 +254,18 @@ export default function NewApplicantActivitiesPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">
+                    <div className="text-lg font-semibold text-gray-600">
                       {loading ? "Loading..." : candidateName}
                     </div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                     {loading ? "…" : statusLabel}
                   </span>
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
@@ -313,12 +313,12 @@ export default function NewApplicantActivitiesPage() {
                             onClick={() => setLeftNav(k)}
                             className={`w-full flex items-center justify-between gap-2 text-left px-3 py-2 rounded-xl border text-xs transition ${
                               isActive
-                                ? "border-teal-200 bg-white text-zinc-900"
-                                : "border-transparent text-zinc-600 hover:bg-white"
+                                ? "border-teal-200 bg-white text-gray-600"
+                                : "border-transparent text-gray-600 hover:bg-white"
                             }`}
                           >
                             <span>{k}</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-medium">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 text-gray-600 font-medium">
                               {count}
                             </span>
                           </button>
@@ -340,8 +340,8 @@ export default function NewApplicantActivitiesPage() {
                             onClick={() => setActive(t)}
                             className={`text-xs px-3 py-1.5 rounded-xl border transition ${
                               isActive
-                                ? "border-teal-200 bg-white text-zinc-900"
-                                : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+                                ? "border-teal-200 bg-white text-gray-600"
+                                : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
                             }`}
                           >
                             {t}
@@ -362,12 +362,12 @@ export default function NewApplicantActivitiesPage() {
                   </div>
 
                   {active !== "Calls" ? (
-                    <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-6 text-sm text-zinc-600">
+                    <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-6 text-sm text-gray-600">
                       {active} for {candidateName} — connect an inbox or interview data source to show items
                       here.
                     </div>
                   ) : leftNav === "History" ? (
-                    <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-6 text-sm text-zinc-600">
+                    <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-6 text-sm text-gray-600">
                       {historyCount > 0 ? (
                         <p>
                           Last profile update tracked from onboarding activity. Full history export can be
@@ -380,17 +380,17 @@ export default function NewApplicantActivitiesPage() {
                   ) : (
                     <div className="bg-white/70 border border-[#9CC3FF]/25 rounded-2xl p-5">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="text-sm font-semibold text-zinc-900">Call History</div>
-                        <div className="text-xs text-zinc-500">
+                        <div className="text-sm font-semibold text-gray-600">Call History</div>
+                        <div className="text-xs text-gray-600">
                           Actions taken{" "}
-                          <span className="font-medium text-zinc-800">{callLogs.length}</span>
+                          <span className="font-medium text-gray-600">{callLogs.length}</span>
                         </div>
                       </div>
 
                       {callLogs.length === 0 ? (
-                        <div className="text-sm text-zinc-500 py-10 text-center border border-dashed border-zinc-200 rounded-2xl">
+                        <div className="text-sm text-gray-600 py-10 text-center border border-dashed border-zinc-200 rounded-2xl">
                           No call logs recorded for{" "}
-                          <span className="font-medium text-zinc-700">{candidateName}</span> yet. Call logs
+                          <span className="font-medium text-gray-600">{candidateName}</span> yet. Call logs
                           can be stored in a future call-log table and loaded here.
                         </div>
                       ) : (
@@ -410,14 +410,14 @@ export default function NewApplicantActivitiesPage() {
                                     <Phone className="w-4 h-4 text-teal-700" />
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="text-xs font-medium text-zinc-900 truncate">
+                                    <div className="text-xs font-medium text-gray-600 truncate">
                                       {c.title}
                                     </div>
-                                    <div className="text-[11px] text-zinc-500">{c.when}</div>
+                                    <div className="text-[11px] text-gray-600">{c.when}</div>
                                   </div>
                                 </div>
 
-                                <div className="col-span-2 text-[11px] text-zinc-500">
+                                <div className="col-span-2 text-[11px] text-gray-600">
                                   Duration: {c.duration}
                                 </div>
 
@@ -429,7 +429,7 @@ export default function NewApplicantActivitiesPage() {
                                   </span>
                                 </div>
 
-                                <div className="col-span-2 text-[11px] text-zinc-500">{c.attempt}</div>
+                                <div className="col-span-2 text-[11px] text-gray-600">{c.attempt}</div>
                               </div>
                             );
                           })}

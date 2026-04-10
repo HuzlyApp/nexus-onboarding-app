@@ -38,8 +38,8 @@ export default function NewApplicantFacilityAssignmentsDemoPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -133,7 +133,7 @@ export default function NewApplicantFacilityAssignmentsDemoPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -147,7 +147,7 @@ export default function NewApplicantFacilityAssignmentsDemoPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -160,7 +160,7 @@ export default function NewApplicantFacilityAssignmentsDemoPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - New Applicant Detailed Page - Recommendation
             </div>
 
@@ -172,16 +172,16 @@ export default function NewApplicantFacilityAssignmentsDemoPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">{candidateName}</div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-lg font-semibold text-gray-600">{candidateName}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                     New Applicant
                   </span>
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
@@ -208,8 +208,8 @@ export default function NewApplicantFacilityAssignmentsDemoPage() {
                   <div className="w-12 h-12 mx-auto rounded-2xl bg-teal-600/10 flex items-center justify-center mb-4">
                     <Building2 className="w-6 h-6 text-teal-700" />
                   </div>
-                  <div className="text-sm font-semibold text-zinc-900">No facility assigned yet</div>
-                  <div className="text-xs text-zinc-500 mt-2">
+                  <div className="text-sm font-semibold text-gray-600">No facility assigned yet</div>
+                  <div className="text-xs text-gray-600 mt-2">
                     No facility assigned yet to the applicant.
                   </div>
                   <div className="text-xs text-teal-700 mt-2 underline underline-offset-4">

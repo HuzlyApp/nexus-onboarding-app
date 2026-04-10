@@ -291,7 +291,7 @@ export default function NewCandidatesPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">Candidates</div>
@@ -306,7 +306,7 @@ export default function NewCandidatesPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -318,12 +318,12 @@ export default function NewCandidatesPage() {
         </header>
 
         <div className="flex-1 p-8 overflow-auto">
-          <div className="text-xs text-zinc-400 mb-3">Admin - New Applicant Listings</div>
+          <div className="text-xs text-gray-600 mb-3">Admin - New Applicant Listings</div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-3xl font-semibold">Candidates</h1>
-              <p className="text-zinc-500">Manage applicants in one place</p>
+              <p className="text-gray-600">Manage applicants in one place</p>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
@@ -332,7 +332,7 @@ export default function NewCandidatesPage() {
               </button>
 
               <div className="flex items-center bg-white border border-zinc-200 rounded-2xl px-5 py-3">
-                <Search className="w-5 h-5 text-zinc-400 mr-3" />
+                <Search className="w-5 h-5 text-gray-600 mr-3" />
                 <input
                   type="text"
                   value={query}
@@ -359,8 +359,8 @@ export default function NewCandidatesPage() {
           <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden">
             <div className="px-6 py-4 border-b border-zinc-100 flex flex-wrap gap-3 items-center justify-between">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="text-sm text-zinc-500">
-                  <span className="font-medium text-zinc-800">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium text-gray-600">
                     {loading ? "—" : totalFromApi ?? rows.length}
                   </span>{" "}
                   in pipeline
@@ -368,26 +368,26 @@ export default function NewCandidatesPage() {
                     <>
                       {" "}
                       · Showing{" "}
-                      <span className="font-medium text-zinc-800">{filtered.length}</span> match
+                      <span className="font-medium text-gray-600">{filtered.length}</span> match
                       {filtered.length === 1 ? "" : "es"}
                     </>
                   ) : null}
                 </div>
                 <div className="h-5 w-px bg-zinc-200 hidden sm:block" />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Type</span>
-                  <span className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700">
+                  <span className="text-xs text-gray-600">Type</span>
+                  <span className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-gray-600">
                     Candidates
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Status</span>
-                  <span className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700">
+                  <span className="text-xs text-gray-600">Status</span>
+                  <span className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 text-gray-600">
                     New
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label htmlFor="filter-job-role" className="text-xs text-zinc-400">
+                  <label htmlFor="filter-job-role" className="text-xs text-gray-600">
                     Job Role
                   </label>
                   <select
@@ -405,7 +405,7 @@ export default function NewCandidatesPage() {
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label htmlFor="filter-location" className="text-xs text-zinc-400">
+                  <label htmlFor="filter-location" className="text-xs text-gray-600">
                     Location
                   </label>
                   <select
@@ -449,17 +449,17 @@ export default function NewCandidatesPage() {
                 <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mb-4">
                   {fetchError}
                 </div>
-                <p className="text-center text-sm text-zinc-500">
+                <p className="text-center text-sm text-gray-600">
                   Check <code className="text-xs bg-zinc-100 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> and that
                   the <code className="text-xs bg-zinc-100 px-1 rounded">worker</code> table exists.
                 </p>
               </div>
             ) : loading ? (
-              <div className="text-center py-20 text-zinc-500">Loading new applicants...</div>
+              <div className="text-center py-20 text-gray-600">Loading new applicants...</div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-20 text-zinc-500 space-y-2">
+              <div className="text-center py-20 text-gray-600 space-y-2">
                 <div>No new applicants found.</div>
-                <div className="text-xs text-zinc-400 max-w-md mx-auto">
+                <div className="text-xs text-gray-600 max-w-md mx-auto">
                   Rows need <code className="bg-zinc-100 px-1 rounded">worker_status</code> of{" "}
                   <code className="bg-zinc-100 px-1 rounded">new</code> (enums use lowercase) or NULL. Legacy{" "}
                   <code className="bg-zinc-100 px-1 rounded">status</code> text is also supported.
@@ -469,7 +469,7 @@ export default function NewCandidatesPage() {
               <div className="overflow-auto">
                 <table className="min-w-[980px] w-full">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-widest text-zinc-400 border-b border-zinc-100">
+                    <tr className="text-left text-xs uppercase tracking-widest text-gray-600 border-b border-zinc-100">
                       {columnsOrder
                         .filter((k) => columnsVisible[k])
                         .map((k) => {
@@ -503,10 +503,10 @@ export default function NewCandidatesPage() {
                                       {initials(r.name)}
                                     </div>
                                     <div className="min-w-0 text-left">
-                                      <div className="font-medium text-zinc-900 truncate group-hover:text-teal-800 group-hover:underline">
+                                      <div className="font-medium text-gray-600 truncate group-hover:text-teal-800 group-hover:underline">
                                         {r.name}
                                       </div>
-                                      <div className="text-xs text-zinc-400">Candidates</div>
+                                      <div className="text-xs text-gray-600">Candidates</div>
                                     </div>
                                   </Link>
                                 </td>
@@ -523,28 +523,28 @@ export default function NewCandidatesPage() {
                             }
                             if (k === "reference") {
                               return (
-                                <td key={k} className="px-4 py-4 text-sm text-zinc-600">
+                                <td key={k} className="px-4 py-4 text-sm text-gray-600">
                                   {r.reference}
                                 </td>
                               );
                             }
                             if (k === "role") {
                               return (
-                                <td key={k} className="px-4 py-4 text-sm text-zinc-600">
+                                <td key={k} className="px-4 py-4 text-sm text-gray-600">
                                   {r.role}
                                 </td>
                               );
                             }
                             if (k === "createdAt") {
                               return (
-                                <td key={k} className="px-4 py-4 text-sm text-zinc-600">
+                                <td key={k} className="px-4 py-4 text-sm text-gray-600">
                                   {formatDate(r.createdAt)}
                                 </td>
                               );
                             }
                             if (k === "location") {
                               return (
-                                <td key={k} className="px-6 py-4 text-sm text-zinc-600">
+                                <td key={k} className="px-6 py-4 text-sm text-gray-600">
                                   {r.location}
                                 </td>
                               );
@@ -578,7 +578,7 @@ export default function NewCandidatesPage() {
         <div className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-6">
           <div className="w-full max-w-5xl bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden">
             <div className="p-6 flex items-center justify-between">
-              <div className="text-lg font-semibold text-zinc-900">Edit Columns</div>
+              <div className="text-lg font-semibold text-gray-600">Edit Columns</div>
               <button
                 type="button"
                 onClick={() => setEditColumnsOpen(false)}
@@ -592,7 +592,7 @@ export default function NewCandidatesPage() {
             <div className="px-6 pb-6 grid grid-cols-12 gap-6">
               {/* Left: choose display columns */}
               <div className="col-span-12 lg:col-span-6">
-                <div className="text-sm font-semibold text-zinc-900">Choose display columns</div>
+                <div className="text-sm font-semibold text-gray-600">Choose display columns</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -608,7 +608,7 @@ export default function NewCandidatesPage() {
                 </button>
 
                 <div className="mt-3 flex items-center gap-3 bg-white border border-zinc-200 rounded-2xl px-4 py-3">
-                  <Search className="w-4 h-4 text-zinc-400" />
+                  <Search className="w-4 h-4 text-gray-600" />
                   <input
                     value={draftSearch}
                     onChange={(e) => setDraftSearch(e.target.value)}
@@ -622,7 +622,7 @@ export default function NewCandidatesPage() {
                     {allColumns
                       .filter((c) => c.label.toLowerCase().includes(draftSearch.trim().toLowerCase()))
                       .map((c) => (
-                        <label key={c.key} className="flex items-center gap-3 text-sm text-zinc-700">
+                        <label key={c.key} className="flex items-center gap-3 text-sm text-gray-600">
                           <input
                             type="checkbox"
                             checked={!!draftVisible[c.key]}
@@ -643,7 +643,7 @@ export default function NewCandidatesPage() {
 
               {/* Right: reorder columns */}
               <div className="col-span-12 lg:col-span-6">
-                <div className="text-sm font-semibold text-zinc-900">Reorder the columns</div>
+                <div className="text-sm font-semibold text-gray-600">Reorder the columns</div>
 
                 <div className="mt-4 bg-white border border-zinc-200 rounded-2xl p-4 max-h-[420px] overflow-auto">
                   <div className="space-y-3">
@@ -656,8 +656,8 @@ export default function NewCandidatesPage() {
                             key={k}
                             className="flex items-center gap-3 border border-zinc-200 rounded-2xl px-4 py-3"
                           >
-                            <GripVertical className="w-4 h-4 text-zinc-400" />
-                            <div className="text-sm text-zinc-800 flex-1">{label}</div>
+                            <GripVertical className="w-4 h-4 text-gray-600" />
+                            <div className="text-sm text-gray-600 flex-1">{label}</div>
 
                             <div className="flex items-center gap-1">
                               <button

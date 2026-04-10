@@ -85,8 +85,8 @@ export default function NewApplicantHistoryDemoPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -184,7 +184,7 @@ export default function NewApplicantHistoryDemoPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -198,7 +198,7 @@ export default function NewApplicantHistoryDemoPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <div className="w-9 h-9 rounded-full bg-zinc-100" />
             </div>
@@ -207,7 +207,7 @@ export default function NewApplicantHistoryDemoPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - New Applicant Detailed Page - History
             </div>
 
@@ -219,13 +219,13 @@ export default function NewApplicantHistoryDemoPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">{candidateName}</div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-lg font-semibold text-gray-600">{candidateName}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                     New Applicant
                   </span>
                 </div>
@@ -248,8 +248,8 @@ export default function NewApplicantHistoryDemoPage() {
               <div className="p-6 grid grid-cols-12 gap-6">
                 <section className="col-span-12">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm font-semibold text-zinc-900">
-                      Actions taken <span className="text-zinc-700">{historyCount}</span>
+                    <div className="text-sm font-semibold text-gray-600">
+                      Actions taken <span className="text-gray-600">{historyCount}</span>
                     </div>
                   </div>
 
@@ -261,11 +261,11 @@ export default function NewApplicantHistoryDemoPage() {
                       >
                         <div className="col-span-6 flex items-start gap-3">
                           <CheckCircle2 className="w-4 h-4 text-teal-700 mt-0.5" />
-                          <div className="text-xs text-zinc-700">{h.action}</div>
+                          <div className="text-xs text-gray-600">{h.action}</div>
                         </div>
                         <div className="col-span-6 text-right">
-                          <div className="text-[11px] text-zinc-500">{h.ago}</div>
-                          <div className="text-[11px] text-zinc-500">
+                          <div className="text-[11px] text-gray-600">{h.ago}</div>
+                          <div className="text-[11px] text-gray-600">
                             {h.date} - {h.time}
                           </div>
                         </div>

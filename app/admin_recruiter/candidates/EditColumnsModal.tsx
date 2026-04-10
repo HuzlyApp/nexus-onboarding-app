@@ -87,13 +87,13 @@ export function EditColumnsModal({ open, onOpenChange, value, onSave }: Props) {
         <Dialog.Content className="fixed left-1/2 top-1/2 z-[101] w-[min(960px,calc(100vw-2rem))] max-h-[min(90vh,820px)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-zinc-200 bg-white shadow-xl flex flex-col outline-none">
           <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
             <div>
-              <Dialog.Title className="text-lg font-semibold text-zinc-900">Edit Columns</Dialog.Title>
+              <Dialog.Title className="text-lg font-semibold text-gray-600">Edit Columns</Dialog.Title>
               <Dialog.Description className="sr-only">
                 Choose which columns appear in the candidates list and drag to reorder them.
               </Dialog.Description>
             </div>
             <Dialog.Close
-              className="rounded-xl p-2 text-zinc-500 hover:bg-zinc-100"
+              className="rounded-xl p-2 text-gray-600 hover:bg-zinc-100"
               aria-label="Close"
             >
               <X className="h-5 w-5" />
@@ -103,17 +103,17 @@ export function EditColumnsModal({ open, onOpenChange, value, onSave }: Props) {
           <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 md:grid-cols-2 md:divide-x md:divide-zinc-100">
             {/* Left: choose columns */}
             <div className="flex min-h-[360px] flex-col p-5 md:max-h-[560px]">
-              <div className="text-sm font-medium text-zinc-800">Choose display columns</div>
+              <div className="text-sm font-medium text-gray-600">Choose display columns</div>
               <div className="mt-3 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5">
-                <Search className="h-4 w-4 shrink-0 text-zinc-400" />
+                <Search className="h-4 w-4 shrink-0 text-gray-600" />
                 <input
                   value={fieldSearch}
                   onChange={(e) => setFieldSearch(e.target.value)}
                   placeholder="Search fields"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-600"
                 />
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+              <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
                 <span>
                   ({selectedCount} of {totalFields})
                 </span>
@@ -139,7 +139,7 @@ export function EditColumnsModal({ open, onOpenChange, value, onSave }: Props) {
                         onChange={() => toggle(col.id)}
                         className="h-4 w-4 rounded border-zinc-300 text-teal-600 focus:ring-teal-600"
                       />
-                      <span className="text-sm text-zinc-800">{col.label}</span>
+                      <span className="text-sm text-gray-600">{col.label}</span>
                     </label>
                   )
                 })}
@@ -148,11 +148,11 @@ export function EditColumnsModal({ open, onOpenChange, value, onSave }: Props) {
 
             {/* Right: reorder */}
             <div className="flex min-h-[360px] flex-col p-5 md:max-h-[560px]">
-              <div className="text-sm font-medium text-zinc-800">Reorder the columns</div>
-              <p className="mt-1 text-xs text-zinc-500">Drag to change order. Remove with ✕.</p>
+              <div className="text-sm font-medium text-gray-600">Reorder the columns</div>
+              <p className="mt-1 text-xs text-gray-600">Drag to change order. Remove with ✕.</p>
               <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {draftOrder.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-zinc-200 py-12 text-center text-sm text-zinc-400">
+                  <div className="rounded-2xl border border-dashed border-zinc-200 py-12 text-center text-sm text-gray-600">
                     No columns selected. Check fields on the left.
                   </div>
                 ) : (
@@ -164,14 +164,14 @@ export function EditColumnsModal({ open, onOpenChange, value, onSave }: Props) {
                       onDragOver={onDragOver}
                       onDrop={(e) => onDropOn(e, id)}
                       onDragEnd={onDragEnd}
-                      className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-sm text-zinc-800 shadow-sm cursor-grab active:cursor-grabbing"
+                      className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-sm text-gray-600 shadow-sm cursor-grab active:cursor-grabbing"
                     >
-                      <GripVertical className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      <GripVertical className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
                       <span className="min-w-0 flex-1 truncate">{columnLabel(id)}</span>
                       <button
                         type="button"
                         onClick={() => removeFromOrder(id)}
-                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700"
+                        className="rounded-lg p-1.5 text-gray-600 hover:bg-zinc-200 hover:text-gray-600"
                         aria-label={`Remove ${columnLabel(id)}`}
                       >
                         <X className="h-4 w-4" />
@@ -187,7 +187,7 @@ export function EditColumnsModal({ open, onOpenChange, value, onSave }: Props) {
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="rounded-2xl border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                className="rounded-2xl border border-zinc-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-zinc-50"
               >
                 Cancel
               </button>

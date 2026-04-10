@@ -169,8 +169,8 @@ export default function NewApplicantAttachmentsFilledPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -264,7 +264,7 @@ export default function NewApplicantAttachmentsFilledPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -279,7 +279,7 @@ export default function NewApplicantAttachmentsFilledPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -292,7 +292,7 @@ export default function NewApplicantAttachmentsFilledPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - New Applicant Detailed Page - Attachments (filled)
             </div>
 
@@ -310,18 +310,18 @@ export default function NewApplicantAttachmentsFilledPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">
+                    <div className="text-lg font-semibold text-gray-600">
                       {loading ? "Loading..." : candidateName}
                     </div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                     New Applicant
                   </span>
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
@@ -361,21 +361,21 @@ export default function NewApplicantAttachmentsFilledPage() {
 
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm font-semibold text-zinc-900">Requirements Submitted</div>
-                      <div className="text-xs text-zinc-500">
-                        Uploaded <span className="font-medium text-zinc-800">{uploadedCount}</span> of{" "}
-                        <span className="font-medium text-zinc-800">{totalCount}</span>
+                      <div className="text-sm font-semibold text-gray-600">Requirements Submitted</div>
+                      <div className="text-xs text-gray-600">
+                        Uploaded <span className="font-medium text-gray-600">{uploadedCount}</span> of{" "}
+                        <span className="font-medium text-gray-600">{totalCount}</span>
                       </div>
                     </div>
 
                     <div className="mt-4 space-y-4">
                       {loading ? (
-                        <div className="text-xs text-zinc-500 py-2">Loading requirements…</div>
+                        <div className="text-xs text-gray-600 py-2">Loading requirements…</div>
                       ) : null}
                       {!loading &&
                         attachmentRows.map((r, idx) => (
                         <div key={r.id} className="rounded-2xl border border-zinc-200 bg-white/70 p-4">
-                          <div className="text-sm font-semibold text-zinc-900">
+                          <div className="text-sm font-semibold text-gray-600">
                             {idx + 1}. {r.title}
                           </div>
                           <div className="mt-3 rounded-2xl border border-teal-200 bg-teal-50/60 p-3 flex items-center justify-between gap-3">
@@ -383,7 +383,7 @@ export default function NewApplicantAttachmentsFilledPage() {
                               <div className="text-xs font-medium text-teal-700 truncate">
                                 {r.url ? r.filename : "Not uploaded yet"}
                               </div>
-                              <div className="text-[11px] text-zinc-500">
+                              <div className="text-[11px] text-gray-600">
                                 {r.url ? "On file" : "—"}
                               </div>
                             </div>
@@ -421,7 +421,7 @@ export default function NewApplicantAttachmentsFilledPage() {
                 <section className="col-span-8">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-5">
-                      <div className="text-sm font-semibold text-zinc-900">Review</div>
+                      <div className="text-sm font-semibold text-gray-600">Review</div>
                       <button className="w-9 h-9 rounded-2xl border border-zinc-200 bg-white/80 hover:bg-white transition flex items-center justify-center">
                         <Plus className="w-4 h-4 text-teal-700" />
                       </button>
@@ -430,7 +430,7 @@ export default function NewApplicantAttachmentsFilledPage() {
                     <div className="space-y-6">
                       {attachmentRows.map((r) => (
                         <div key={`review-${r.id}`} className="flex items-center justify-between gap-4">
-                          <div className="text-xs text-zinc-500">{r.title}</div>
+                          <div className="text-xs text-gray-600">{r.title}</div>
                           <div className="flex items-center gap-2 flex-wrap justify-end">
                             <button
                               type="button"

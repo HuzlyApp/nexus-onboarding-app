@@ -122,7 +122,7 @@ export default function ResultsClient() {
   }, [workers, query, place]);
 
   return (
-    <div className="flex h-screen bg-zinc-50 overflow-hidden text-zinc-600">
+    <div className="flex h-screen bg-zinc-50 overflow-hidden text-gray-600">
       <div className="fixed inset-y-0 left-0 z-40 w-72 bg-[#0A1F1C] text-white hidden lg:block">
         <div className="px-6 py-8 flex items-center gap-3 border-b border-white/10">
           <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center">
@@ -161,7 +161,7 @@ export default function ResultsClient() {
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div>
             <div className="font-semibold text-2xl">Candidates</div>
-            <div className="text-xs text-zinc-400">Admin - Advanced Search Results</div>
+            <div className="text-xs text-gray-600">Admin - Advanced Search Results</div>
           </div>
           <Link
             href="/admin_recruiter/advanced-search"
@@ -183,7 +183,7 @@ export default function ResultsClient() {
 
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center bg-white border border-zinc-200 rounded-2xl px-5 py-3">
-                <Search className="w-5 h-5 text-zinc-400 mr-3" />
+                <Search className="w-5 h-5 text-gray-600 mr-3" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -212,7 +212,7 @@ export default function ResultsClient() {
               <div className="overflow-auto">
                 <table className="min-w-[1180px] w-full">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-widest text-zinc-400 border-b border-zinc-100">
+                    <tr className="text-left text-xs uppercase tracking-widest text-gray-600 border-b border-zinc-100">
                       <th className="px-6 py-4 font-medium">Name</th>
                       <th className="px-4 py-4 font-medium">Job Role</th>
                       <th className="px-4 py-4 font-medium">Location</th>
@@ -224,26 +224,26 @@ export default function ResultsClient() {
                   <tbody>
                     {filteredSorted.map((w) => (
                       <tr key={w.id} className="border-b border-zinc-100 hover:bg-zinc-50/70">
-                        <td className="px-6 py-4 text-sm text-zinc-800">
+                        <td className="px-6 py-4 text-sm text-gray-600">
                           {w.first_name} {w.last_name}
                         </td>
-                        <td className="px-4 py-4 text-sm text-zinc-600">{w.job_role}</td>
-                        <td className="px-4 py-4 text-sm text-zinc-600">
+                        <td className="px-4 py-4 text-sm text-gray-600">{w.job_role}</td>
+                        <td className="px-4 py-4 text-sm text-gray-600">
                           {w.address1
                             ? w.address1
                             : w.address
                               ? w.address
                               : [w.city, w.state].filter(Boolean).join(", ") || "—"}
                         </td>
-                        <td className="px-4 py-4 text-sm text-zinc-600">
+                        <td className="px-4 py-4 text-sm text-gray-600">
                           {typeof w.distance_meters === "number"
                             ? `${(w.distance_meters / 1609.344).toFixed(1)} mi`
                             : "—"}
                         </td>
-                        <td className="px-4 py-4 text-sm text-zinc-600">
+                        <td className="px-4 py-4 text-sm text-gray-600">
                           {w.lat?.toFixed?.(3) ?? w.lat}
                         </td>
-                        <td className="px-6 py-4 text-sm text-zinc-600">
+                        <td className="px-6 py-4 text-sm text-gray-600">
                           {w.lng?.toFixed?.(3) ?? w.lng}
                         </td>
                       </tr>

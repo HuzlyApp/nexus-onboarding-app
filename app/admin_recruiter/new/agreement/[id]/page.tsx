@@ -92,8 +92,8 @@ export default function NewApplicantAgreementPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -185,7 +185,7 @@ export default function NewApplicantAgreementPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -199,7 +199,7 @@ export default function NewApplicantAgreementPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -212,7 +212,7 @@ export default function NewApplicantAgreementPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - New Applicant Detailed Page - Agreement
             </div>
 
@@ -229,18 +229,18 @@ export default function NewApplicantAgreementPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">
+                    <div className="text-lg font-semibold text-gray-600">
                       {loading ? "Loading..." : candidateName}
                     </div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                     {loading ? "…" : statusLabel}
                   </span>
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
@@ -273,10 +273,10 @@ export default function NewApplicantAgreementPage() {
                 {/* 1. Agreement 1 */}
                 <section>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm font-semibold text-zinc-900">1. Agreement 1</div>
-                    <div className="text-xs text-zinc-500">
-                      Not uploaded <span className="font-medium text-zinc-800">0</span> of{" "}
-                      <span className="font-medium text-zinc-800">1</span>
+                    <div className="text-sm font-semibold text-gray-600">1. Agreement 1</div>
+                    <div className="text-xs text-gray-600">
+                      Not uploaded <span className="font-medium text-gray-600">0</span> of{" "}
+                      <span className="font-medium text-gray-600">1</span>
                     </div>
                   </div>
                   <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/80 p-6">
@@ -285,8 +285,8 @@ export default function NewApplicantAgreementPage() {
                         <FileText className="w-6 h-6 text-teal-700" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-900">Agreement 1</div>
-                        <p className="text-xs text-zinc-500 mt-1">
+                        <div className="text-sm font-medium text-gray-600">Agreement 1</div>
+                        <p className="text-xs text-gray-600 mt-1">
                           Placeholder for the first agreement package. Connect storage or e-sign when ready.
                         </p>
                         <div className="flex flex-wrap gap-2 mt-4">
@@ -311,10 +311,10 @@ export default function NewApplicantAgreementPage() {
                 {/* 2. Employee Agreement W2 */}
                 <section>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm font-semibold text-zinc-900">2. Employee Agreement W2</div>
-                    <div className="text-xs text-zinc-500">
-                      Signed <span className="font-medium text-zinc-800">1</span> of{" "}
-                      <span className="font-medium text-zinc-800">1</span>
+                    <div className="text-sm font-semibold text-gray-600">2. Employee Agreement W2</div>
+                    <div className="text-xs text-gray-600">
+                      Signed <span className="font-medium text-gray-600">1</span> of{" "}
+                      <span className="font-medium text-gray-600">1</span>
                     </div>
                   </div>
                   <div className="rounded-2xl border border-[#9CC3FF]/30 bg-white/90 p-5">
@@ -327,7 +327,7 @@ export default function NewApplicantAgreementPage() {
                           <div className="text-xs font-medium text-teal-800 truncate">
                             Employee Agreement W2.pdf
                           </div>
-                          <div className="text-[11px] text-zinc-500">7.23 MB</div>
+                          <div className="text-[11px] text-gray-600">7.23 MB</div>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 justify-end">
@@ -361,11 +361,11 @@ export default function NewApplicantAgreementPage() {
                 {/* 3. I9 Form */}
                 <section>
                   <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                    <div className="text-sm font-semibold text-zinc-900">3. I9 Form</div>
+                    <div className="text-sm font-semibold text-gray-600">3. I9 Form</div>
                     <div className="flex items-center gap-3">
-                      <div className="text-xs text-zinc-500">
-                        Uploaded <span className="font-medium text-zinc-800">1</span> of{" "}
-                        <span className="font-medium text-zinc-800">1</span>
+                      <div className="text-xs text-gray-600">
+                        Uploaded <span className="font-medium text-gray-600">1</span> of{" "}
+                        <span className="font-medium text-gray-600">1</span>
                       </div>
                       <button
                         type="button"
@@ -391,7 +391,7 @@ export default function NewApplicantAgreementPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="text-xs font-medium text-teal-800 truncate">I9 Form.pdf</div>
-                          <div className="text-[11px] text-zinc-500">5.23 MB</div>
+                          <div className="text-[11px] text-gray-600">5.23 MB</div>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 justify-end">

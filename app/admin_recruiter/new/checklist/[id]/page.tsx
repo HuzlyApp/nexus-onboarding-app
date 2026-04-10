@@ -80,7 +80,7 @@ function badgeClasses(state: ItemState): string {
     case "not_reachable":
       return "bg-red-50 text-red-800 border-red-100";
     case "not_applicable":
-      return "bg-slate-50 text-slate-600 border-slate-100";
+      return "bg-slate-50 text-gray-600 border-slate-100";
     default:
       return "bg-amber-50 text-amber-800 border-amber-100";
   }
@@ -259,7 +259,7 @@ export default function NewApplicantChecklistPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen((v) => !v)}
-              className="lg:hidden text-zinc-700"
+              className="lg:hidden text-gray-600"
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -267,7 +267,7 @@ export default function NewApplicantChecklistPage() {
               <div className="font-semibold text-2xl">{isWorkerRoute ? "Worker" : "New Applicant"}</div>
               <Link
                 href={isWorkerRoute ? "/admin_recruiter/workers" : "/admin_recruiter/new"}
-                className="text-sm text-zinc-500 hover:text-zinc-700"
+                className="text-sm text-gray-600 hover:text-gray-600"
               >
                 Back to {isWorkerRoute ? "Workers" : "New"}
               </Link>
@@ -283,7 +283,7 @@ export default function NewApplicantChecklistPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -296,7 +296,7 @@ export default function NewApplicantChecklistPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - {isWorkerRoute ? "Worker" : "New Applicant"} Detailed Page - Checklist
             </div>
 
@@ -313,11 +313,11 @@ export default function NewApplicantChecklistPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">
+                    <div className="text-lg font-semibold text-gray-600">
                       {loading ? "Loading..." : candidateName}
                     </div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
-                    <div className="text-xs text-zinc-400">{candidateLocation}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
+                    <div className="text-xs text-gray-600">{candidateLocation}</div>
                     {data?.worker?.status_label ? (
                       <div className="mt-1 text-[11px] font-medium text-teal-800">{data.worker.status_label}</div>
                     ) : null}
@@ -326,8 +326,8 @@ export default function NewApplicantChecklistPage() {
 
                 <div className="flex items-center gap-3">
                   <div className="text-right hidden sm:block">
-                    <div className="text-xs text-zinc-500">Days in current stage</div>
-                    <div className="text-sm font-semibold text-zinc-800">
+                    <div className="text-xs text-gray-600">Days in current stage</div>
+                    <div className="text-sm font-semibold text-gray-600">
                       {data?.meta?.daysInStage ?? "—"}
                       {data?.meta ? " days" : ""}
                     </div>
@@ -335,7 +335,7 @@ export default function NewApplicantChecklistPage() {
 
                   <button
                     type="button"
-                    className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm"
+                    className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm"
                   >
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
@@ -347,17 +347,17 @@ export default function NewApplicantChecklistPage() {
                 <aside className="col-span-12 lg:col-span-3 space-y-4">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="text-sm font-semibold text-zinc-900">Progress Checklist Tracker</div>
+                      <div className="text-sm font-semibold text-gray-600">Progress Checklist Tracker</div>
                       <span className="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
                         In Progress
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between mb-3">
-                      <div className="text-2xl font-semibold text-zinc-900">
+                      <div className="text-2xl font-semibold text-gray-600">
                         {data?.meta?.completedItems ?? "—"}
                       </div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-xs text-gray-600">
                         {data?.meta ? `of ${data.meta.totalItems} items` : ""}
                       </div>
                     </div>
@@ -369,7 +369,7 @@ export default function NewApplicantChecklistPage() {
                       />
                     </div>
 
-                    <div className="text-[11px] text-zinc-500 mb-2">
+                    <div className="text-[11px] text-gray-600 mb-2">
                       Documents {data?.meta?.verifiedDocuments.done ?? 0}/
                       {data?.meta?.verifiedDocuments.total ?? 4} · Quizzes {data?.meta?.skillAssessments.completed ?? 0}/
                       {data?.meta?.skillAssessments.total ?? 0}
@@ -385,7 +385,7 @@ export default function NewApplicantChecklistPage() {
                             ) : (
                               <div className="w-4 h-4 border border-zinc-300 rounded-full shrink-0" />
                             )}
-                            <span className={done ? "text-zinc-800" : "text-zinc-500"}>{label}</span>
+                            <span className={done ? "text-gray-600" : "text-gray-600"}>{label}</span>
                           </div>
                         );
                       })}
@@ -404,8 +404,8 @@ export default function NewApplicantChecklistPage() {
                           href={href}
                           className={`text-xs px-3 py-1.5 rounded-xl border transition ${
                             isActive
-                              ? "border-[#7AA6FF] bg-white text-zinc-900"
-                              : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+                              ? "border-[#7AA6FF] bg-white text-gray-600"
+                              : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
                           }`}
                         >
                           {key}
@@ -415,7 +415,7 @@ export default function NewApplicantChecklistPage() {
                   </div>
 
                   {loading ? (
-                    <div className="text-center py-16 text-zinc-500">Loading checklist…</div>
+                    <div className="text-center py-16 text-gray-600">Loading checklist…</div>
                   ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                       {(data?.sections ?? []).map((section) => (
@@ -425,9 +425,9 @@ export default function NewApplicantChecklistPage() {
                         >
                           <div className="flex items-start justify-between gap-3 mb-4">
                             <div>
-                              <div className="text-sm font-semibold text-zinc-900">{section.title}</div>
+                              <div className="text-sm font-semibold text-gray-600">{section.title}</div>
                               {section.subtitle ? (
-                                <div className="text-xs text-zinc-500 mt-0.5">{section.subtitle}</div>
+                                <div className="text-xs text-gray-600 mt-0.5">{section.subtitle}</div>
                               ) : null}
                             </div>
                           </div>
@@ -440,16 +440,16 @@ export default function NewApplicantChecklistPage() {
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0">
-                                    <div className="text-sm font-medium text-zinc-900">{row.title}</div>
+                                    <div className="text-sm font-medium text-gray-600">{row.title}</div>
                                     {row.subtitle ? (
-                                      <div className="text-xs text-zinc-500 mt-0.5">{row.subtitle}</div>
+                                      <div className="text-xs text-gray-600 mt-0.5">{row.subtitle}</div>
                                     ) : null}
                                   </div>
                                   <RowBadge text={row.badge ?? "Pending"} state={row.state} />
                                 </div>
 
                                 {typeof row.checked === "boolean" ? (
-                                  <div className="mt-3 flex items-center gap-2 text-xs text-zinc-600">
+                                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-600">
                                     <div
                                       className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
                                         row.checked
@@ -466,7 +466,7 @@ export default function NewApplicantChecklistPage() {
                                 ) : null}
 
                                 {row.detailLine ? (
-                                  <div className="mt-2 text-[11px] text-zinc-400">{row.detailLine}</div>
+                                  <div className="mt-2 text-[11px] text-gray-600">{row.detailLine}</div>
                                 ) : null}
                               </div>
                             ))}

@@ -183,8 +183,8 @@ export default function NewApplicantHistoryPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -267,7 +267,7 @@ export default function NewApplicantHistoryPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -281,7 +281,7 @@ export default function NewApplicantHistoryPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <div className="w-9 h-9 rounded-full bg-zinc-100" />
             </div>
@@ -290,7 +290,7 @@ export default function NewApplicantHistoryPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">Admin - New Applicant Detailed Page - History</div>
+            <div className="mb-5 text-xs text-gray-600">Admin - New Applicant Detailed Page - History</div>
 
             {loadError ? (
               <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -305,13 +305,13 @@ export default function NewApplicantHistoryPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">
+                    <div className="text-lg font-semibold text-gray-600">
                       {loading ? "Loading..." : candidateName}
                     </div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
-                <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                   {loading ? "…" : statusLabel}
                 </span>
               </div>
@@ -333,16 +333,16 @@ export default function NewApplicantHistoryPage() {
               <div className="p-6 grid grid-cols-12 gap-6">
                 <section className="col-span-12">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm font-semibold text-zinc-900">
+                    <div className="text-sm font-semibold text-gray-600">
                       Actions taken{" "}
-                      <span className="text-zinc-700">{loading ? "—" : historyCount}</span>
+                      <span className="text-gray-600">{loading ? "—" : historyCount}</span>
                     </div>
                   </div>
 
                   {loading ? (
-                    <div className="text-sm text-zinc-500 py-6">Loading history…</div>
+                    <div className="text-sm text-gray-600 py-6">Loading history…</div>
                   ) : historyCount === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/60 px-6 py-10 text-center text-sm text-zinc-500">
+                    <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/60 px-6 py-10 text-center text-sm text-gray-600">
                       No history events yet. When a dedicated activity log is stored per worker, entries will
                       appear here. For now, record creation and profile updates are shown when timestamps are
                       available.
@@ -358,12 +358,12 @@ export default function NewApplicantHistoryPage() {
                             <div className="w-8 h-8 rounded-full bg-teal-600/10 flex items-center justify-center shrink-0">
                               <CheckCircle2 className="w-4 h-4 text-teal-700" />
                             </div>
-                            <div className="text-xs text-zinc-700">{h.action}</div>
+                            <div className="text-xs text-gray-600">{h.action}</div>
                           </div>
                           <div className="col-span-6 sm:col-span-5 text-right sm:text-right">
-                            <div className="text-[11px] text-zinc-500">
-                              {h.ago} <span className="text-zinc-300">•</span> {h.date}{" "}
-                              <span className="text-zinc-300">•</span> {h.time}
+                            <div className="text-[11px] text-gray-600">
+                              {h.ago} <span className="text-gray-600">•</span> {h.date}{" "}
+                              <span className="text-gray-600">•</span> {h.time}
                             </div>
                           </div>
                         </div>

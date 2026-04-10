@@ -74,8 +74,8 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
       href={href}
       className={`text-xs px-3 py-1.5 rounded-xl border transition ${
         active
-          ? "border-[#7AA6FF] bg-white text-zinc-900"
-          : "border-zinc-200 bg-white/60 text-zinc-600 hover:bg-white"
+          ? "border-[#7AA6FF] bg-white text-gray-600"
+          : "border-zinc-200 bg-white/60 text-gray-600 hover:bg-white"
       }`}
     >
       {label}
@@ -169,7 +169,7 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">New Applicant</div>
@@ -184,7 +184,7 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -197,7 +197,7 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
 
         <div className="flex-1 p-8 overflow-auto">
           <div className="max-w-[1320px] mx-auto">
-            <div className="mb-5 text-xs text-zinc-400">
+            <div className="mb-5 text-xs text-gray-600">
               Admin - New Applicant Detailed Page - Authorization (filled)
             </div>
 
@@ -209,16 +209,16 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
                     {initials(candidateName)}
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-zinc-900">{candidateName}</div>
-                    <div className="text-xs text-zinc-500">{candidateRole}</div>
+                    <div className="text-lg font-semibold text-gray-600">{candidateName}</div>
+                    <div className="text-xs text-gray-600">{candidateRole}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-zinc-700 font-medium">
+                  <span className="text-[11px] px-3 py-1 rounded-full bg-white/70 border border-zinc-200 text-gray-600 font-medium">
                     New Applicant
                   </span>
-                  <button className="bg-white/70 border border-[#9CC3FF] text-zinc-800 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
+                  <button className="bg-white/70 border border-[#9CC3FF] text-gray-600 px-5 py-2.5 rounded-2xl hover:bg-white transition text-sm">
                     <Plus className="inline-block w-4 h-4 mr-2" />
                     New Appointment
                   </button>
@@ -247,14 +247,14 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
                 {/* Left */}
                 <section className="col-span-7 space-y-6">
                   <div>
-                    <div className="text-sm font-semibold text-zinc-900 mb-3">Authorization</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-3">Authorization</div>
 
                     <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <div className="text-xs text-zinc-500">1. Authorization</div>
-                        <div className="text-xs text-zinc-500">
-                          Signed <span className="font-medium text-zinc-800">1</span> of{" "}
-                          <span className="font-medium text-zinc-800">1</span>
+                        <div className="text-xs text-gray-600">1. Authorization</div>
+                        <div className="text-xs text-gray-600">
+                          Signed <span className="font-medium text-gray-600">1</span> of{" "}
+                          <span className="font-medium text-gray-600">1</span>
                         </div>
                       </div>
 
@@ -263,7 +263,7 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
                           <div className="text-xs font-medium text-teal-700 truncate">
                             {authorization.name}
                           </div>
-                          <div className="text-[11px] text-zinc-500">{authorization.size}</div>
+                          <div className="text-[11px] text-gray-600">{authorization.size}</div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-[11px] px-3 py-1 rounded-full bg-teal-600 text-white font-medium">
@@ -281,7 +281,7 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
                   </div>
 
                   <div>
-                    <div className="text-sm font-semibold text-zinc-900 mb-3">Documents</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-3">Documents</div>
                     <div className="space-y-4">
                       {documents.map((d, idx) => (
                         <div
@@ -289,14 +289,14 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
                           className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5"
                         >
                           <div className="flex items-center justify-between mb-3">
-                            <div className="text-xs text-zinc-500">
+                            <div className="text-xs text-gray-600">
                               {idx + 2}. {d.title}
                             </div>
-                            <div className="text-xs text-zinc-500">
+                            <div className="text-xs text-gray-600">
                               Uploaded{" "}
-                              <span className="font-medium text-zinc-800">{d.uploaded.split(" ")[0]}</span>{" "}
+                              <span className="font-medium text-gray-600">{d.uploaded.split(" ")[0]}</span>{" "}
                               of{" "}
-                              <span className="font-medium text-zinc-800">{d.uploaded.split(" ")[2]}</span>
+                              <span className="font-medium text-gray-600">{d.uploaded.split(" ")[2]}</span>
                             </div>
                           </div>
 
@@ -310,7 +310,7 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
                                   <div className="text-xs font-medium text-teal-700 truncate">
                                     {f.name}
                                   </div>
-                                  <div className="text-[11px] text-zinc-500">{f.size}</div>
+                                  <div className="text-[11px] text-gray-600">{f.size}</div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {d.signed ? (
@@ -337,11 +337,11 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
                 {/* Right */}
                 <section className="col-span-5">
                   <div className="bg-white/80 border border-[#9CC3FF]/30 rounded-2xl p-5">
-                    <div className="text-sm font-semibold text-zinc-900 mb-4">Review</div>
+                    <div className="text-sm font-semibold text-gray-600 mb-4">Review</div>
 
                     <div className="space-y-6">
                       <div className="flex items-center justify-between gap-4">
-                        <div className="text-xs text-zinc-500">Authorization</div>
+                        <div className="text-xs text-gray-600">Authorization</div>
                         <div className="flex items-center gap-2">
                           <button className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition">
                             Approved
@@ -357,7 +357,7 @@ export default function NewApplicantAuthorizationFilledDemoPage() {
 
                       {documents.map((d) => (
                         <div key={d.title} className="flex items-center justify-between gap-4">
-                          <div className="text-xs text-zinc-500">{d.title}</div>
+                          <div className="text-xs text-gray-600">{d.title}</div>
                           <div className="flex items-center gap-2">
                             <button className="text-xs px-4 py-2 rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition">
                               Approved

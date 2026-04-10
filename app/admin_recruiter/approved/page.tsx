@@ -216,7 +216,7 @@ export default function ApprovedCandidatesPage() {
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-72">
         <header className="h-16 border-b bg-white flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-zinc-700">
+            <button onClick={() => setSidebarOpen((v) => !v)} className="lg:hidden text-gray-600">
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="font-semibold text-2xl">Candidates</div>
@@ -231,7 +231,7 @@ export default function ApprovedCandidatesPage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="font-medium text-sm">Sean Smith</div>
-                <div className="text-xs text-zinc-500">Manager</div>
+                <div className="text-xs text-gray-600">Manager</div>
               </div>
               <img
                 src="https://i.pravatar.cc/128?u=sean"
@@ -243,12 +243,12 @@ export default function ApprovedCandidatesPage() {
         </header>
 
         <div className="flex-1 p-8 overflow-auto">
-          <div className="text-xs text-zinc-400 mb-3">Admin - Approved Applicant Listings</div>
+          <div className="text-xs text-gray-600 mb-3">Admin - Approved Applicant Listings</div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-3xl font-semibold">Candidates</h1>
-              <p className="text-zinc-500">Manage applicants in one place</p>
+              <p className="text-gray-600">Manage applicants in one place</p>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
@@ -257,7 +257,7 @@ export default function ApprovedCandidatesPage() {
               </button>
 
               <div className="flex items-center bg-white border border-zinc-200 rounded-2xl px-5 py-3">
-                <Search className="w-5 h-5 text-zinc-400 mr-3" />
+                <Search className="w-5 h-5 text-gray-600 mr-3" />
                 <input
                   type="text"
                   value={query}
@@ -280,31 +280,31 @@ export default function ApprovedCandidatesPage() {
           <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden">
             <div className="px-6 py-4 border-b border-zinc-100 flex flex-wrap gap-3 items-center justify-between">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="text-sm text-zinc-500">
-                  Total: <span className="font-medium text-zinc-800">{filtered.length}</span>{" "}
+                <div className="text-sm text-gray-600">
+                  Total: <span className="font-medium text-gray-600">{filtered.length}</span>{" "}
                   applicants
                 </div>
                 <div className="h-5 w-px bg-zinc-200 hidden sm:block" />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Type</span>
+                  <span className="text-xs text-gray-600">Type</span>
                   <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
                     Candidates
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Status</span>
+                  <span className="text-xs text-gray-600">Status</span>
                   <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
                     Approved
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Job Role</span>
+                  <span className="text-xs text-gray-600">Job Role</span>
                   <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
                     All
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">Location</span>
+                  <span className="text-xs text-gray-600">Location</span>
                   <button className="text-sm px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50">
                     All
                   </button>
@@ -319,14 +319,14 @@ export default function ApprovedCandidatesPage() {
             </div>
 
             {loading ? (
-              <div className="text-center py-20 text-zinc-500">Loading approved applicants...</div>
+              <div className="text-center py-20 text-gray-600">Loading approved applicants...</div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-20 text-zinc-500">No approved applicants found.</div>
+              <div className="text-center py-20 text-gray-600">No approved applicants found.</div>
             ) : (
               <div className="overflow-auto">
                 <table className="min-w-[980px] w-full">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-widest text-zinc-400 border-b border-zinc-100">
+                    <tr className="text-left text-xs uppercase tracking-widest text-gray-600 border-b border-zinc-100">
                       <th className="px-6 py-4 font-medium">Name</th>
                       <th className="px-4 py-4 font-medium">Status</th>
                       <th className="px-4 py-4 font-medium">Reference</th>
@@ -344,8 +344,8 @@ export default function ApprovedCandidatesPage() {
                               {initials(r.name)}
                             </div>
                             <div className="min-w-0">
-                              <div className="font-medium text-zinc-900 truncate">{r.name}</div>
-                              <div className="text-xs text-zinc-400">Candidates</div>
+                              <div className="font-medium text-gray-600 truncate">{r.name}</div>
+                              <div className="text-xs text-gray-600">Candidates</div>
                             </div>
                           </div>
                         </td>
@@ -354,10 +354,10 @@ export default function ApprovedCandidatesPage() {
                             {r.status}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm text-zinc-600">{r.reference}</td>
-                        <td className="px-4 py-4 text-sm text-zinc-600">{r.role}</td>
-                        <td className="px-4 py-4 text-sm text-zinc-600">{formatDate(r.createdAt)}</td>
-                        <td className="px-6 py-4 text-sm text-zinc-600">{r.location}</td>
+                        <td className="px-4 py-4 text-sm text-gray-600">{r.reference}</td>
+                        <td className="px-4 py-4 text-sm text-gray-600">{r.role}</td>
+                        <td className="px-4 py-4 text-sm text-gray-600">{formatDate(r.createdAt)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{r.location}</td>
                       </tr>
                     ))}
                   </tbody>
